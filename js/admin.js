@@ -241,8 +241,10 @@ function setupUpload() {
 }
 
 async function handleUpload(file) {
-  if (!file.name.toLowerCase().endsWith('.apk')) {
-    showUploadResult('error', 'Hanya file .apk yang diperbolehkan.');
+  // Validasi longgar — hanya blok file tanpa ekstensi sama sekali
+  const nameLower = file.name.toLowerCase();
+  if (!nameLower.includes('.')) {
+    showUploadResult('error', 'File harus memiliki ekstensi (contoh: .apk, .zip).');
     return;
   }
 

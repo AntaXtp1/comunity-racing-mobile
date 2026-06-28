@@ -108,9 +108,9 @@ async function handleUpload(request, env, cors) {
   const file = formData.get('file');
   if (!file) return jsonResponse({ error: 'Field "file" tidak ada' }, 400, cors);
 
-  // Validate extension
-  if (!file.name.toLowerCase().endsWith('.apk')) {
-    return jsonResponse({ error: 'Hanya file .apk yang diperbolehkan' }, 400, cors);
+  // Validasi longgar — terima semua file yang punya ekstensi
+  if (!file.name.includes('.')) {
+    return jsonResponse({ error: 'File harus memiliki ekstensi' }, 400, cors);
   }
 
   await env.R2_BUCKET.put(file.name, file.stream(), {

@@ -329,29 +329,22 @@ async function handleUpload(file) {
           loadFileList();
           loadStorageInfo();
         } else {
-          showUploadResult('error', `✗ Upload gagal (HTTP ${xhr.status}). Coba upload dari dashboard R2.`);
+          // Fallback: coba upload via Worker
+          fallbackUploadViaWorker(file, progressEl, fillEl, labelEl, cancelBtn, resolve);
         }
-        resolve();
       };
 
       xhr.onerror = (e) => {
         currentXhr = null;
-        progressEl.hidden = true;
-        if (cancelBtn) cancelBtn.style.display = 'none';
-        // Only show error if request actually completed
-        if (xhr.readyState === 4) {
-          showUploadResult('error', `✗ Upload gagal (HTTP ${xhr.status}). Coba upload dari dashboard R2.`);
-        } else {
-          showUploadResult('error', '✗ Koneksi terputus. Cek internet atau coba upload dari dashboard R2.');
-        }
-        resolve();
+        // Fallback: coba upload via Worker
+        fallbackUploadViaWorker(file, progressEl, fillEl, labelEl, cancelBtn, resolve);
       };
 
       xhr.ontimeout = () => {
         currentXhr = null;
         progressEl.hidden = true;
         if (cancelBtn) cancelBtn.style.display = 'none';
-        showUploadResult('error', '✗ Upload timeout. File terlalu besar atau koneksi lambat.');
+        showUploadResult('error', '✗ Upload timeout. File terlalu besar atau koneksi lambat. Coba upload dari dashboard R2.');
         resolve();
       };
 
@@ -377,8 +370,40 @@ function showUploadResult(type, message) {
   const el = document.getElementById('uploadResult');
   el.className    = `upload-result ${type}`;
   el.textContent  = message;
-  // Auto-clear after 5 seconds
-  setTimeout(() => { el.textContent = ''; }, 5000);
+  // Auto-clear after 8 seconds
+  setTimeout(() => { el.textContent = ''; }, 8000);
+}
+
+// Fallback: upload via Worker (for small files or if presigned URL fails)
+async function fallbackUploadViaWorker(file, progressEl, fillEl, labelEl, cancelBtn, resolve) {
+  labelEl.textContent = `Mencoba upload alternatif ${file.name}...`;
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+
+    const res = await authFetch('/api/upload', {
+      method: 'POST',
+      body: formData
+    });
+
+    progressEl.hidden = true;
+    if (cancelBtn) cancelBtn.style.display = 'none';
+
+    if (res.ok) {
+      showUploadResult('success', `✓ ${file.name} berhasil diupload (mode alternatif)`);
+      loadFileList();
+      loadStorageInfo();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      showUploadResult('error', `✗ ${data.error || 'Upload gagal'}. Coba upload dari dashboard R2.`);
+    }
+  } catch (err) {
+    progressEl.hidden = true;
+    if (cancelBtn) cancelBtn.style.display = 'none';
+    showUploadResult('error', `✗ Upload gagal. Coba upload dari dashboard R2: https://dash.cloudflare.com/r2`);
+  }
+  resolve();
 }
 
 // ---- Helpers ----

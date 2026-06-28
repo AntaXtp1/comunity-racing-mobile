@@ -2,7 +2,10 @@
 // MAIN.JS — Public page rendering + APK list fetch
 // ============================================================
 
+let currentLang = localStorage.getItem('lang') || 'id';
+
 document.addEventListener('DOMContentLoaded', () => {
+  applyLanguage(currentLang);
   renderNavbar();
   renderHero();
   renderAbout();
@@ -13,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupDiscordModal();
   setupNavSocial();
   setupPartnerApk();
+  setupLanguageToggle();
   fetchApkList();
 });
 
@@ -36,14 +40,14 @@ function renderHero() {
 }
 
 function renderAbout() {
-  document.getElementById('aboutText').textContent = SITE_CONFIG.about.description;
+  const t = SITE_CONFIG.i18n[currentLang];
+  document.getElementById('aboutText').textContent = t.aboutDesc;
 
-  // Stats
   const statsGrid = document.getElementById('statsGrid');
   statsGrid.innerHTML = SITE_CONFIG.about.stats.map(s => `
     <div class="stat-card">
       <div class="stat-value">${s.value}</div>
-      <div class="stat-label">${s.label}</div>
+      <div class="stat-label">${t['stat' + s.label.replace(/\s/g, '')] || s.label}</div>
     </div>
   `).join('');
 
@@ -166,6 +170,36 @@ function setupPartnerApk() {
   btn.href = SITE_CONFIG.partnerApk.discord;
 }
 
+// ---- Language Toggle ----
+
+function setupLanguageToggle() {
+  const btn   = document.getElementById('langToggle');
+  const label = document.getElementById('langLabel');
+  
+  // Set initial label
+  label.textContent = currentLang === 'id' ? 'EN' : 'ID';
+  
+  btn.addEventListener('click', () => {
+    currentLang = currentLang === 'id' ? 'en' : 'id';
+    localStorage.setItem('lang', currentLang);
+    label.textContent = currentLang === 'id' ? 'EN' : 'ID';
+    applyLanguage(currentLang);
+  });
+}
+
+function applyLanguage(lang) {
+  const t = SITE_CONFIG.i18n[lang];
+  
+  // Update all elements with data-i18n
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (t[key]) el.textContent = t[key];
+  });
+  
+  // Re-render dynamic content
+  renderAbout();
+}
+
 // ---- Navbar interactions ----
 
 function setupNavbarToggle() {
@@ -195,6 +229,7 @@ function setupNavbarScroll() {
 
 async function fetchApkList() {
   const container = document.getElementById('apkList');
+  const t = SITE_CONFIG.i18n[currentLang];
 
   try {
     const res = await fetch(`${SITE_CONFIG.apiBaseUrl}/api/list`);
@@ -203,7 +238,7 @@ async function fetchApkList() {
     const files = await res.json();
 
     if (!Array.isArray(files) || files.length === 0) {
-      container.innerHTML = '<p class="loading-text">Belum ada APK tersedia.</p>';
+      container.innerHTML = `<p class="loading-text">${t.emptyApk}</p>`;
       return;
     }
 
@@ -218,7 +253,7 @@ async function fetchApkList() {
         </div>
         <a href="${SITE_CONFIG.apiBaseUrl}/api/download/${encodeURIComponent(f.name)}"
            class="btn-download" download>
-          <i class="fa-solid fa-download"></i> Download
+          <i class="fa-solid fa-download"></i> ${t.downloadBtn}
         </a>
       </div>
     `).join('');
@@ -226,7 +261,7 @@ async function fetchApkList() {
   } catch (err) {
     container.innerHTML = `<p class="error-text">
       <i class="fa-solid fa-circle-exclamation"></i>
-      Gagal memuat daftar APK. Coba lagi nanti.
+      ${t.errorApk}
     </p>`;
     console.error('[APK fetch]', err);
   }

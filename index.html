@@ -26,10 +26,10 @@
         <i class="fa-solid fa-bars"></i>
       </button>
       <ul class="nav-links" id="navLinks">
-        <li><a href="#hero">Home</a></li>
-        <li><a href="#community">Community</a></li>
-        <li><a href="#team">Team</a></li>
-        <li><a href="#download">Download</a></li>
+        <li><a href="#hero"      data-i18n="navHome">Home</a></li>
+        <li><a href="#community" data-i18n="navCommunity">Community</a></li>
+        <li><a href="#team"      data-i18n="navTeam">Team</a></li>
+        <li><a href="#download"  data-i18n="navDownload">Download</a></li>
       </ul>
       <div class="nav-social" id="navSocial">
         <button class="nav-icon" id="discordBtn" aria-label="Discord">
@@ -41,6 +41,9 @@
         <a href="#" class="nav-icon" id="youtubeIcon" target="_blank" rel="noopener" aria-label="YouTube" style="display:none">
           <i class="fa-brands fa-youtube"></i>
         </a>
+        <button class="lang-toggle" id="langToggle" aria-label="Toggle language">
+          <span id="langLabel">EN</span>
+        </button>
       </div>
     </div>
   </nav>
@@ -49,15 +52,15 @@
   <div class="discord-modal" id="discordModal">
     <div class="discord-modal-content">
       <button class="discord-modal-close" id="discordModalClose">&times;</button>
-      <h3 class="discord-modal-title">Pilih Komunitas Discord</h3>
+      <h3 class="discord-modal-title" data-i18n="discordTitle">Pilih Komunitas Discord</h3>
       <div class="discord-options">
         <a href="#" class="discord-option" id="discordMainLink" target="_blank" rel="noopener">
           <i class="fa-brands fa-discord"></i>
-          <span>Gran Velocita</span>
+          <span data-i18n="discordMain">Gran Velocita</span>
         </a>
         <a href="#" class="discord-option" id="discordPartnerLink" target="_blank" rel="noopener">
           <i class="fa-brands fa-discord"></i>
-          <span>Gran Emozion Community</span>
+          <span data-i18n="discordPartner">Gran Emozion Community</span>
         </a>
       </div>
     </div>
@@ -67,13 +70,13 @@
   <section class="hero" id="hero">
     <div class="hero-content">
       <h1 class="hero-title" id="heroTitle">Sim Racing Community</h1>
-      <p class="hero-tagline" id="heroTagline">Komunitas balapan mobile terdepan</p>
+      <p class="hero-tagline" id="heroTagline" data-i18n="heroTagline">Komunitas balapan mobile terdepan di Indonesia</p>
       <div class="hero-buttons">
         <a href="#download" class="btn btn-primary">
-          <i class="fa-solid fa-download"></i> Download APK
+          <i class="fa-solid fa-download"></i> <span data-i18n="heroDownload">Download APK</span>
         </a>
         <a href="#" class="btn btn-secondary" id="heroDiscord" target="_blank" rel="noopener">
-          <i class="fa-brands fa-discord"></i> Join Discord
+          <i class="fa-brands fa-discord"></i> <span data-i18n="heroJoin">Join Discord</span>
         </a>
       </div>
     </div>
@@ -83,8 +86,8 @@
   <!-- INFO KOMUNITAS -->
   <section class="section" id="community">
     <div class="container">
-      <h2 class="section-title">Tentang Komunitas</h2>
-      <p class="about-text" id="aboutText"></p>
+      <h2 class="section-title" data-i18n="aboutTitle">Tentang Komunitas</h2>
+      <p class="about-text" id="aboutText" data-i18n="aboutDesc"></p>
       <div class="stats-grid" id="statsGrid"></div>
       <div class="platforms-row" id="platformsRow"></div>
     </div>
@@ -93,8 +96,8 @@
   <!-- HIRARKI GRUP -->
   <section class="section section-alt" id="team">
     <div class="container">
-      <h2 class="section-title">Tim Kami</h2>
-      <p class="section-sub">Kenali orang-orang di balik komunitas ini</p>
+      <h2 class="section-title" data-i18n="teamTitle">Tim Kami</h2>
+      <p class="section-sub" data-i18n="teamSub">Kenali orang-orang di balik komunitas ini</p>
       <div class="team-grid" id="teamGrid"></div>
     </div>
   </section>
@@ -102,28 +105,28 @@
   <!-- DOWNLOAD APK -->
   <section class="section" id="download">
     <div class="container">
-      <h2 class="section-title">Download APK</h2>
-      <p class="section-sub">File terbaru langsung dari server kami</p>
-      
+      <h2 class="section-title" data-i18n="downloadTitle">Download APK</h2>
+      <p class="section-sub" data-i18n="downloadSub">File terbaru langsung dari server kami</p>
+
       <!-- APK Kami (dari R2) -->
-      <h3 class="apk-section-title">📦 APK Komunitas Kami</h3>
+      <h3 class="apk-section-title" data-i18n="apkOurs">📦 APK Komunitas Kami</h3>
       <div class="apk-list" id="apkList">
-        <p class="loading-text"><i class="fa-solid fa-spinner fa-spin"></i> Memuat daftar APK...</p>
+        <p class="loading-text"><i class="fa-solid fa-spinner fa-spin"></i> <span data-i18n="loadingApk">Memuat daftar APK...</span></p>
       </div>
 
       <!-- APK Partner -->
-      <h3 class="apk-section-title">📦 APK Partner - Gran Emozion</h3>
+      <h3 class="apk-section-title" data-i18n="apkPartner">📦 APK Partner - Gran Emozion</h3>
       <div class="apk-partner" id="apkPartner">
         <div class="apk-card partner-card">
           <div class="apk-info">
             <div class="apk-icon partner-icon"><i class="fa-brands fa-discord"></i></div>
             <div>
               <div class="apk-name">Gran Emozion Community</div>
-              <div class="apk-meta">Download game dari komunitas partner kami</div>
+              <div class="apk-meta" data-i18n="partnerDesc">Download game dari komunitas partner kami</div>
             </div>
           </div>
           <a href="#" class="btn-download" id="partnerDiscordBtn" target="_blank" rel="noopener">
-            <i class="fa-brands fa-discord"></i> Ke Discord
+            <i class="fa-brands fa-discord"></i> <span data-i18n="partnerBtn">Ke Discord</span>
           </a>
         </div>
       </div>

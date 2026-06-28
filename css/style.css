@@ -158,6 +158,28 @@ ul  { list-style: none; }
   transform:    translateY(-2px);
 }
 
+/* Language toggle */
+.lang-toggle {
+  padding:       6px 12px;
+  border-radius: var(--radius);
+  background:    rgba(255, 255, 255, 0.05);
+  border:        1px solid var(--border);
+  color:         var(--silver-200);
+  font-family:   var(--font-heading);
+  font-size:     0.85rem;
+  font-weight:   600;
+  cursor:        pointer;
+  transition:    var(--transition);
+  letter-spacing: 0.5px;
+}
+
+.lang-toggle:hover {
+  background:   var(--accent);
+  color:        #fff;
+  border-color: var(--accent);
+  transform:    translateY(-2px);
+}
+
 /* ============================================================
    HERO
    ============================================================ */

@@ -93,7 +93,7 @@ function renderFooter() {
 
   const labels = {
     discordMain:    'Discord Gran Velocita',
-    discordPartner: 'Discord Gran Emozion',
+    discordPartner: 'Discord Gran Emozione',
     whatsapp:       'WhatsApp',
     youtube:        'YouTube'
   };

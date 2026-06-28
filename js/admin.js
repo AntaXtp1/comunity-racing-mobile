@@ -342,17 +342,18 @@ async function handleRegularUpload(file, progressEl, fillEl, labelEl, cancelBtn)
           const elapsed = (Date.now() - startTime) / 1000;
           const speed = e.loaded / elapsed;
           const remaining = (e.total - e.loaded) / speed;
+          const speedText = formatSpeed(speed);
 
           fillEl.style.width = `${pct}%`;
 
           let etaText = '';
           if (remaining > 60) {
-            etaText = ` (${Math.ceil(remaining / 60)} menit lagi)`;
+            etaText = ` • ${Math.ceil(remaining / 60)} menit lagi`;
           } else if (remaining > 0) {
-            etaText = ` (${Math.ceil(remaining)} detik lagi)`;
+            etaText = ` • ${Math.ceil(remaining)} detik lagi`;
           }
 
-          labelEl.textContent = `Mengupload ${pct}%${etaText}`;
+          labelEl.textContent = `Mengupload ${pct}% • ${speedText}${etaText}`;
         }
       };
 
@@ -460,19 +461,20 @@ async function handleMultipartUpload(file, progressEl, fillEl, labelEl, cancelBt
       const pct = Math.round((uploadedBytes / file.size) * 100);
       fillEl.style.width = `${pct}%`;
 
-      // Calculate ETA
+      // Calculate speed + ETA
       const elapsed = (Date.now() - startTime) / 1000;
-      const speed = uploadedBytes / elapsed;
+      const speed = uploadedBytes / elapsed; // bytes/s
       const remaining = (file.size - uploadedBytes) / speed;
+      const speedText = formatSpeed(speed);
 
       let etaText = '';
       if (remaining > 60) {
-        etaText = ` (${Math.ceil(remaining / 60)} menit lagi)`;
+        etaText = ` • ${Math.ceil(remaining / 60)} menit lagi`;
       } else if (remaining > 0) {
-        etaText = ` (${Math.ceil(remaining)} detik lagi)`;
+        etaText = ` • ${Math.ceil(remaining)} detik lagi`;
       }
 
-      labelEl.textContent = `Mengupload ${pct}% (part ${partNumber}/${totalParts})${etaText}`;
+      labelEl.textContent = `Mengupload ${pct}% — part ${partNumber}/${totalParts} • ${speedText}${etaText}`;
     }
 
     // 3. Complete upload
@@ -481,7 +483,7 @@ async function handleMultipartUpload(file, progressEl, fillEl, labelEl, cancelBt
     const completeRes = await authFetch('/api/upload/complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key, uploadId, parts })
+      body: JSON.stringify({ key, uploadId, parts, totalSize: file.size })
     });
 
     if (!completeRes.ok) {
@@ -603,6 +605,13 @@ function formatSize(bytes) {
   if (bytes < 1024)      return bytes + ' B';
   if (bytes < 1_048_576) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / 1_048_576).toFixed(1) + ' MB';
+}
+
+function formatSpeed(bytesPerSec) {
+  if (!bytesPerSec || bytesPerSec <= 0) return '';
+  if (bytesPerSec < 1024)       return bytesPerSec.toFixed(0) + ' B/s';
+  if (bytesPerSec < 1_048_576)  return (bytesPerSec / 1024).toFixed(1) + ' KB/s';
+  return (bytesPerSec / 1_048_576).toFixed(1) + ' MB/s';
 }
 
 function formatDate(ts) {

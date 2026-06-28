@@ -11,7 +11,7 @@ const SITE_CONFIG = {
   about: {
     description: "Komunitas bagi para pecinta sim racing di platform mobile. Bergabunglah untuk berbagi setup, tips, dan adu kecepatan dengan racer terbaik.",
     platforms: ["Android", "iOS"],
-    games: ["Gran Velocita", "Gran Emozion", "Grid Autosport", "CPM 2", "CPM 1", "dll."],
+    games: ["Gran Velocita", "Gran Emozione", "Grid Autosport", "CPM 2", "CPM 1", "dll."],
     stats: [
       { label: "Anggota", value: "400+" },
       { label: "Game Aktif", value: "6+" }
@@ -35,7 +35,7 @@ const SITE_CONFIG = {
       downloadTitle:  "Download APK",
       downloadSub:    "File terbaru langsung dari server kami",
       apkOurs:        "📦 APK Komunitas Kami",
-      apkPartner:     "📦 APK Partner - Gran Emozion",
+      apkPartner:     "📦 APK Partner - Gran Emozione",
       partnerDesc:    "Download game dari komunitas partner kami",
       partnerBtn:     "Ke Discord",
       downloadBtn:    "Download",
@@ -44,7 +44,7 @@ const SITE_CONFIG = {
       errorApk:       "Gagal memuat daftar APK. Coba lagi nanti.",
       discordTitle:   "Pilih Komunitas Discord",
       discordMain:    "Gran Velocita",
-      discordPartner: "Gran Emozion Community",
+      discordPartner: "Gran Emozione Community",
       heroDownload:   "Download APK",
       heroJoin:       "Join Discord",
     },
@@ -63,7 +63,7 @@ const SITE_CONFIG = {
       downloadTitle:  "Download APK",
       downloadSub:    "Latest files directly from our server",
       apkOurs:        "📦 Our Community APKs",
-      apkPartner:     "📦 Partner APK - Gran Emozion",
+      apkPartner:     "📦 Partner APK - Gran Emozione",
       partnerDesc:    "Download games from our partner community",
       partnerBtn:     "Go to Discord",
       downloadBtn:    "Download",
@@ -72,7 +72,7 @@ const SITE_CONFIG = {
       errorApk:       "Failed to load APK list. Try again later.",
       discordTitle:   "Choose a Discord Community",
       discordMain:    "Gran Velocita",
-      discordPartner: "Gran Emozion Community",
+      discordPartner: "Gran Emozione Community",
       heroDownload:   "Download APK",
       heroJoin:       "Join Discord",
     }
@@ -109,7 +109,7 @@ const SITE_CONFIG = {
 
   // Partner APK (redirect ke Discord partner)
   partnerApk: {
-    name: "Gran Emozion Community",
+    name: "Gran Emozione Community",
     discord: "https://discord.gg/gran-emozione-community-1348404725732872272",
     description: "Download game dari komunitas partner kami"
   },

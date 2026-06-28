@@ -276,8 +276,12 @@ async function handleStorage(env, cors) {
   }
 
   // Fallback: sum file sizes from listing
-  const list = await env.R2_BUCKET.list();
-  const usedBytes = (list.objects || []).reduce((acc, o) => acc + (o.size || 0), 0);
+  const list = await env.R2_BUCKET.list({ include: ['customMetadata'] });
+  const usedBytes = (list.objects || []).reduce((acc, o) => {
+    // Prefer customMetadata.fileSize (set by multipart complete)
+    const metaSize = o.customMetadata?.fileSize ? parseInt(o.customMetadata.fileSize) : 0;
+    return acc + (metaSize || o.size || 0);
+  }, 0);
   return jsonResponse({
     usedBytes,
     totalBytes:  TOTAL_BYTES,
@@ -384,6 +388,25 @@ async function handleMultipartComplete(request, env, cors) {
     
     // Complete the upload
     await multipartUpload.complete(parts);
+
+    // Patch metadata with file size (R2 multipart doesn't auto-expose size in list)
+    if (body.totalSize) {
+      try {
+        const obj = await env.R2_BUCKET.get(key);
+        if (obj) {
+          await env.R2_BUCKET.put(key, obj.body, {
+            httpMetadata:   { contentType: 'application/vnd.android.package-archive' },
+            customMetadata: {
+              uploadedAt: new Date().toISOString(),
+              fileSize:   String(body.totalSize)
+            }
+          });
+        }
+      } catch (metaErr) {
+        console.error('[Metadata patch error]', metaErr);
+        // Non-fatal — upload still succeeded
+      }
+    }
     
     return jsonResponse({
       success: true,

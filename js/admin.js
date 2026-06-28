@@ -220,15 +220,28 @@ async function handleDelete(name, btn) {
 
 // ---- Upload ----
 
+let currentXhr = null; // Track current upload for cancellation
+
 function setupUpload() {
   const dropzone  = document.getElementById('dropzone');
   const fileInput = document.getElementById('fileInput');
+  const cancelBtn = document.getElementById('cancelUploadBtn');
 
   // File input change
   fileInput.addEventListener('change', e => {
     if (e.target.files[0]) handleUpload(e.target.files[0]);
     fileInput.value = ''; // reset so same file can be picked again
   });
+
+  // Cancel upload
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      if (currentXhr) {
+        currentXhr.abort();
+        currentXhr = null;
+      }
+    });
+  }
 
   // Drag events
   ['dragenter', 'dragover'].forEach(evt => {
@@ -259,13 +272,15 @@ async function handleUpload(file) {
     return;
   }
 
-  const progressEl = document.getElementById('uploadProgress');
-  const fillEl     = document.getElementById('uploadFill');
-  const labelEl    = document.getElementById('uploadLabel');
+  const progressEl  = document.getElementById('uploadProgress');
+  const fillEl      = document.getElementById('uploadFill');
+  const labelEl     = document.getElementById('uploadLabel');
+  const cancelBtn   = document.getElementById('cancelUploadBtn');
 
   progressEl.hidden = false;
   fillEl.style.width  = '0%';
   labelEl.textContent = `Mempersiapkan upload ${file.name}...`;
+  if (cancelBtn) cancelBtn.style.display = 'inline-flex';
 
   try {
     // 1. Minta presigned URL dari Worker
@@ -287,7 +302,14 @@ async function handleUpload(file) {
 
     return new Promise((resolve) => {
       const xhr = new XMLHttpRequest();
+      currentXhr = xhr;
+
+      // Set timeout — 10 menit max
+      xhr.timeout = 600000;
+
       xhr.open('PUT', url);
+      // Set Content-Type supaya R2 menerima file dengan benar
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
 
       xhr.upload.onprogress = e => {
         if (e.lengthComputable) {
@@ -298,20 +320,41 @@ async function handleUpload(file) {
       };
 
       xhr.onload = () => {
+        currentXhr = null;
         progressEl.hidden = true;
+        if (cancelBtn) cancelBtn.style.display = 'none';
+
         if (xhr.status >= 200 && xhr.status < 300) {
           showUploadResult('success', `✓ ${file.name} berhasil diupload`);
           loadFileList();
           loadStorageInfo();
         } else {
-          showUploadResult('error', `✗ Upload gagal (HTTP ${xhr.status})`);
+          showUploadResult('error', `✗ Upload gagal (HTTP ${xhr.status}). Coba upload dari dashboard R2.`);
         }
         resolve();
       };
 
       xhr.onerror = () => {
+        currentXhr = null;
         progressEl.hidden = true;
-        showUploadResult('error', '✗ Koneksi gagal. Coba lagi.');
+        if (cancelBtn) cancelBtn.style.display = 'none';
+        showUploadResult('error', '✗ Koneksi gagal. Cek internet atau coba upload dari dashboard R2.');
+        resolve();
+      };
+
+      xhr.ontimeout = () => {
+        currentXhr = null;
+        progressEl.hidden = true;
+        if (cancelBtn) cancelBtn.style.display = 'none';
+        showUploadResult('error', '✗ Upload timeout. File terlalu besar atau koneksi lambat.');
+        resolve();
+      };
+
+      xhr.onabort = () => {
+        currentXhr = null;
+        progressEl.hidden = true;
+        if (cancelBtn) cancelBtn.style.display = 'none';
+        showUploadResult('error', '✗ Upload dibatalkan.');
         resolve();
       };
 
@@ -320,6 +363,7 @@ async function handleUpload(file) {
 
   } catch (err) {
     progressEl.hidden = true;
+    if (cancelBtn) cancelBtn.style.display = 'none';
     showUploadResult('error', `✗ ${err.message}`);
   }
 }

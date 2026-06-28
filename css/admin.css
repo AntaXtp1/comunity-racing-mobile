@@ -190,6 +190,7 @@ body {
 .btn-secondary:hover { border-color: var(--silver-400); }
 
 .btn-block { width: 100%; justify-content: center; }
+.btn-sm { padding: 8px 16px; font-size: 0.85rem; }
 
 .btn-text {
   background: none;

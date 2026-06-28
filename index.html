@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sim Racing Community</title>
+  <meta name="description" content="Komunitas Sim Racing Mobile">
+
+  <!-- Google Fonts: Rajdhani (headings) + Inter (body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="#" class="nav-logo" id="navLogo">Community</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Menu">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#hero">Home</a></li>
+        <li><a href="#community">Community</a></li>
+        <li><a href="#team">Team</a></li>
+        <li><a href="#download">Download</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <div class="hero-content">
+      <h1 class="hero-title" id="heroTitle">Sim Racing Community</h1>
+      <p class="hero-tagline" id="heroTagline">Komunitas balapan mobile terdepan</p>
+      <div class="hero-buttons">
+        <a href="#download" class="btn btn-primary">
+          <i class="fa-solid fa-download"></i> Download APK
+        </a>
+        <a href="#" class="btn btn-secondary" id="heroDiscord" target="_blank" rel="noopener">
+          <i class="fa-brands fa-discord"></i> Join Discord
+        </a>
+      </div>
+    </div>
+    <div class="hero-bg-lines" aria-hidden="true"></div>
+  </section>
+
+  <!-- INFO KOMUNITAS -->
+  <section class="section" id="community">
+    <div class="container">
+      <h2 class="section-title">Tentang Komunitas</h2>
+      <p class="about-text" id="aboutText"></p>
+      <div class="stats-grid" id="statsGrid"></div>
+      <div class="platforms-row" id="platformsRow"></div>
+    </div>
+  </section>
+
+  <!-- HIRARKI GRUP -->
+  <section class="section section-alt" id="team">
+    <div class="container">
+      <h2 class="section-title">Tim Kami</h2>
+      <p class="section-sub">Kenali orang-orang di balik komunitas ini</p>
+      <div class="team-grid" id="teamGrid"></div>
+    </div>
+  </section>
+
+  <!-- DOWNLOAD APK -->
+  <section class="section" id="download">
+    <div class="container">
+      <h2 class="section-title">Download APK</h2>
+      <p class="section-sub">File terbaru langsung dari server kami</p>
+      <div class="apk-list" id="apkList">
+        <p class="loading-text"><i class="fa-solid fa-spinner fa-spin"></i> Memuat daftar APK...</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-content">
+      <p class="footer-name" id="footerName">Sim Racing Community</p>
+      <div class="footer-social" id="footerSocial"></div>
+      <p class="footer-copy" id="footerCopy">© 2026 Sim Racing Community</p>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

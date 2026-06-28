@@ -1,0 +1,45 @@
+name              = "srmc-worker"
+main              = "index.js"
+compatibility_date = "2024-12-01"
+
+# R2 bucket binding
+[[r2_buckets]]
+binding            = "R2_BUCKET"
+bucket_name        = "srmc-apks"
+preview_bucket_name = "srmc-apks-preview"
+
+# Non-secret vars
+[vars]
+R2_BUCKET_NAME = "srmc-apks"
+
+# ============================================================
+# SECRETS — set once via Wrangler CLI (NOT in this file)
+# ============================================================
+# Run these commands after `wrangler login`:
+#
+#   wrangler secret put ADMIN_PASSWORD_HASH
+#     → Generate hash first (run locally in terminal):
+#       node -e "
+#         const c = require('crypto');
+#         const salt = c.randomBytes(16).toString('hex');
+#         const pw   = 'YOUR_PASSWORD_HERE';
+#         const hash = c.createHash('sha256').update(salt + pw).digest('hex');
+#         console.log(salt + ':' + hash);
+#       "
+#     → Paste the output as the secret value.
+#
+#   wrangler secret put API_KEY
+#     → Use a strong random string, e.g.:
+#       node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+#
+#   wrangler secret put CF_ACCOUNT_ID
+#     → Your Cloudflare Account ID (Dashboard → right sidebar)
+#
+#   wrangler secret put CF_API_TOKEN
+#     → Create at: https://dash.cloudflare.com/profile/api-tokens
+#       Permission: R2:Read (or Object Read)
+#
+#   wrangler secret put ALLOWED_ORIGIN
+#     → Your Cloudflare Pages URL, e.g.:
+#       https://sim-racing-community.pages.dev
+# ============================================================

@@ -747,7 +747,7 @@ ul  { list-style: none; }
 }
 
 @media (max-width: 767px) {
-  .nav-toggle { display: block; }
+  .nav-toggle { display: block; z-index: 1001; }
 
   .nav-links {
     position:   fixed;
@@ -765,9 +765,15 @@ ul  { list-style: none; }
 
   .nav-links.active { transform: translateY(0); }
 
-  .nav-social {
-    display: flex;
-    margin-left: auto;
+  /* Hide social icons from navbar on mobile — prevent overflow */
+  .nav-social { display: none; }
+
+  .nav-logo {
+    font-size: 1rem;
+    max-width: 55%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .section        { padding: 64px 16px; }

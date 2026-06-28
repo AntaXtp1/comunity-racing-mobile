@@ -3,6 +3,8 @@
 // ============================================================
 
 const TOKEN_KEY  = 'srmc_admin_token';
+const TOKEN_TS   = 'srmc_admin_token_ts';
+const TOKEN_TTL  = 12 * 3600 * 1000; // 12 hours (matches Worker token expiry)
 const apiBase    = SITE_CONFIG.apiBaseUrl;
 
 // ---- Bootstrap ----
@@ -13,7 +15,14 @@ document.addEventListener('DOMContentLoaded', () => {
   if (subtitleEl) subtitleEl.textContent = SITE_CONFIG.communityName;
 
   const token = localStorage.getItem(TOKEN_KEY);
-  if (token) {
+  const ts    = parseInt(localStorage.getItem(TOKEN_TS) || '0');
+
+  // Check if token expired
+  if (token && Date.now() - ts > TOKEN_TTL) {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_TS);
+    showLogin();
+  } else if (token) {
     showDashboard();
   } else {
     showLogin();
@@ -54,6 +63,7 @@ async function handleLogin(e) {
 
     const data = await res.json();
     localStorage.setItem(TOKEN_KEY, data.token);
+    localStorage.setItem(TOKEN_TS, String(Date.now()));
     showDashboard();
   } catch (err) {
     errorEl.textContent = err.message;
@@ -66,6 +76,7 @@ async function handleLogin(e) {
 function handleLogout() {
   if (!confirm('Yakin mau logout?')) return;
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(TOKEN_TS);
   showLogin();
 }
 

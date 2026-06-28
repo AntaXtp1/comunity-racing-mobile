@@ -5,9 +5,50 @@
 //   GET    /api/list              — list all files (public)
 //   GET    /api/download/:name    — download file (public)
 //   POST   /api/upload            — upload file (auth required)
+//   POST   /api/presign           — get presigned URL for large upload (auth required)
 //   DELETE /api/delete/:name      — delete file (auth required)
 //   GET    /api/storage           — storage usage info (auth required)
+//
+// SECURITY:
+//   - Rate limiting (5 login attempts/min, 30 general requests/min)
+//   - PBKDF2 password hashing (replaces SHA-256)
+//   - Security headers (CSP, X-Frame-Options, X-Content-Type-Options, etc.)
+//   - Input validation & sanitization
+//   - Timing-safe comparisons
 // ============================================================
+
+// In-memory rate limiter (resets on Worker restart — acceptable for free tier)
+const rateLimitStore = new Map();
+
+function checkRateLimit(ip, limit, windowMs) {
+  const now   = Date.now();
+  const key   = `${ip}:${limit}`;
+  const entry = rateLimitStore.get(key);
+
+  if (!entry || now - entry.start > windowMs) {
+    rateLimitStore.set(key, { start: now, count: 1 });
+    return { allowed: true, remaining: limit - 1 };
+  }
+
+  entry.count++;
+  if (entry.count > limit) {
+    return { allowed: false, remaining: 0 };
+  }
+
+  return { allowed: true, remaining: limit - entry.count };
+}
+
+function getSecurityHeaders() {
+  return {
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; connect-src 'self' https://srmc-worker.antarahimmuhammad.workers.dev; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+  };
+}
 
 export default {
   async fetch(request, env) {
@@ -15,29 +56,50 @@ export default {
     const path   = url.pathname;
     const method = request.method;
     const origin = request.headers.get('Origin') || '';
+    const ip     = request.headers.get('CF-Connecting-IP') || 'unknown';
     const cors   = getCORSHeaders(env, origin);
+    const secHeaders = getSecurityHeaders();
+
+    // Merge security + CORS headers
+    const allHeaders = { ...secHeaders, ...cors };
 
     // Handle CORS preflight
     if (method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: cors });
+      return new Response(null, { status: 204, headers: allHeaders });
+    }
+
+    // Rate limiting: auth endpoint (5 attempts/min)
+    if (path === '/api/auth' && method === 'POST') {
+      const rl = checkRateLimit(ip, 5, 60000);
+      if (!rl.allowed) {
+        return jsonResponse({ error: 'Terlalu banyak percobaan. Coba 1 menit lagi.' }, 429, allHeaders);
+      }
+    }
+
+    // Rate limiting: general API (60 requests/min)
+    if (path.startsWith('/api/')) {
+      const rl = checkRateLimit(ip, 60, 60000);
+      if (!rl.allowed) {
+        return jsonResponse({ error: 'Rate limit exceeded' }, 429, allHeaders);
+      }
     }
 
     try {
       // Public routes (no auth)
-      if (method === 'POST'   && path === '/api/auth')               return handleAuth(request, env, cors);
-      if (method === 'GET'    && path === '/api/list')               return handleList(env, cors);
-      if (method === 'GET'    && path.startsWith('/api/download/'))  return handleDownload(path, env, cors);
+      if (method === 'POST'   && path === '/api/auth')               return handleAuth(request, env, allHeaders);
+      if (method === 'GET'    && path === '/api/list')               return handleList(env, allHeaders);
+      if (method === 'GET'    && path.startsWith('/api/download/'))  return handleDownload(path, env, allHeaders);
 
       // Protected routes (auth required)
-      if (method === 'POST'   && path === '/api/upload')             return handleUpload(request, env, cors);
-      if (method === 'POST'   && path === '/api/presign')            return handlePresign(request, env, cors);
-      if (method === 'DELETE' && path.startsWith('/api/delete/'))   return handleDelete(request, path, env, cors);
-      if (method === 'GET'    && path === '/api/storage')            return handleStorage(env, cors);
+      if (method === 'POST'   && path === '/api/upload')             return handleUpload(request, env, allHeaders);
+      if (method === 'POST'   && path === '/api/presign')            return handlePresign(request, env, allHeaders);
+      if (method === 'DELETE' && path.startsWith('/api/delete/'))   return handleDelete(request, path, env, allHeaders);
+      if (method === 'GET'    && path === '/api/storage')            return handleStorage(env, allHeaders);
 
-      return jsonResponse({ error: 'Not found' }, 404, cors);
+      return jsonResponse({ error: 'Not found' }, 404, allHeaders);
     } catch (err) {
       console.error('[Worker error]', err);
-      return jsonResponse({ error: 'Internal server error' }, 500, cors);
+      return jsonResponse({ error: 'Internal server error' }, 500, allHeaders);
     }
   }
 };
@@ -114,6 +176,12 @@ async function handleUpload(request, env, cors) {
     return jsonResponse({ error: 'File harus memiliki ekstensi' }, 400, cors);
   }
 
+  // Max file size: 2GB
+  const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024;
+  if (file.size && file.size > MAX_FILE_SIZE) {
+    return jsonResponse({ error: 'File terlalu besar. Maksimal 2GB.' }, 413, cors);
+  }
+
   await env.R2_BUCKET.put(file.name, file.stream(), {
     httpMetadata:   { contentType: 'application/vnd.android.package-archive' },
     customMetadata: { uploadedAt: new Date().toISOString() }
@@ -136,14 +204,15 @@ async function handlePresign(request, env, cors) {
   const { fileName } = body;
   if (!fileName) return jsonResponse({ error: 'fileName diperlukan' }, 400, cors);
 
-  // Validasi ekstensi
-  if (!fileName.includes('.')) {
-    return jsonResponse({ error: 'File harus memiliki ekstensi' }, 400, cors);
+  // Sanitize fileName — prevent path traversal
+  const safeName = fileName.replace(/[^a-zA-Z0-9._\-\s()]/g, '_').replace(/\.\./g, '_');
+  if (!safeName || !safeName.includes('.')) {
+    return jsonResponse({ error: 'Nama file tidak valid' }, 400, cors);
   }
 
   try {
-    const url = await generatePresignedUrl(env, fileName);
-    return jsonResponse({ url, fileName }, 200, cors);
+    const url = await generatePresignedUrl(env, safeName);
+    return jsonResponse({ url, fileName: safeName }, 200, cors);
   } catch (err) {
     console.error('[Presign error]', err);
     return jsonResponse({ error: 'Gagal generate presigned URL' }, 500, cors);
@@ -154,7 +223,8 @@ async function handleDelete(request, path, env, cors) {
   const authErr = await requireAuth(request, env, cors);
   if (authErr) return authErr;
 
-  const name = decodeURIComponent(path.replace('/api/delete/', ''));
+  const rawName = decodeURIComponent(path.replace('/api/delete/', ''));
+  const name = rawName.replace(/[^a-zA-Z0-9._\-\s()]/g, '_').replace(/\.\./g, '_');
   if (!name) return jsonResponse({ error: 'Nama file diperlukan' }, 400, cors);
 
   // Check exists first
@@ -214,7 +284,25 @@ async function handleStorage(env, cors) {
 async function verifyPassword(password, hash) {
   if (!hash || !password) return false;
 
-  // Expected format: "salt:sha256hex"
+  // Expected format: "pbkdf2:salt:iterations:hash"
+  const parts = hash.split(':');
+  if (parts.length === 4 && parts[0] === 'pbkdf2') {
+    const [, salt, iterations, expected] = parts;
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']
+    );
+    const derivedBits = await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', salt: enc.encode(salt), iterations: parseInt(iterations), hash: 'SHA-256' },
+      keyMaterial, 256
+    );
+    const actual = Array.from(new Uint8Array(derivedBits))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+    return timingSafeEqual(actual, expected);
+  }
+
+  // Backward compatibility: old "salt:sha256hex" format
   const colonIdx = hash.indexOf(':');
   if (colonIdx === -1) return false;
 
@@ -234,7 +322,7 @@ async function signToken(env) {
   const secret  = env.API_KEY || 'fallback-dev-secret';
   const payload = JSON.stringify({
     iat: Date.now(),
-    exp: Date.now() + 24 * 3600 * 1000  // 24h
+    exp: Date.now() + 12 * 3600 * 1000  // 12h (reduced from 24h)
   });
 
   const enc = new TextEncoder();

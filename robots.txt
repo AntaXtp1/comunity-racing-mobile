@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /admin.html
+Disallow: /assets/
+Disallow: /worker/
+
+Sitemap: https://simrace-community.pages.dev/sitemap.xml

@@ -31,8 +31,37 @@
         <li><a href="#team">Team</a></li>
         <li><a href="#download">Download</a></li>
       </ul>
+      <div class="nav-social" id="navSocial">
+        <button class="nav-icon" id="discordBtn" aria-label="Discord">
+          <i class="fa-brands fa-discord"></i>
+        </button>
+        <a href="#" class="nav-icon" id="whatsappIcon" target="_blank" rel="noopener" aria-label="WhatsApp">
+          <i class="fa-brands fa-whatsapp"></i>
+        </a>
+        <a href="#" class="nav-icon" id="youtubeIcon" target="_blank" rel="noopener" aria-label="YouTube" style="display:none">
+          <i class="fa-brands fa-youtube"></i>
+        </a>
+      </div>
     </div>
   </nav>
+
+  <!-- DISCORD POPUP MODAL -->
+  <div class="discord-modal" id="discordModal">
+    <div class="discord-modal-content">
+      <button class="discord-modal-close" id="discordModalClose">&times;</button>
+      <h3 class="discord-modal-title">Pilih Komunitas Discord</h3>
+      <div class="discord-options">
+        <a href="#" class="discord-option" id="discordMainLink" target="_blank" rel="noopener">
+          <i class="fa-brands fa-discord"></i>
+          <span>Gran Velocita</span>
+        </a>
+        <a href="#" class="discord-option" id="discordPartnerLink" target="_blank" rel="noopener">
+          <i class="fa-brands fa-discord"></i>
+          <span>Gran Emozion Community</span>
+        </a>
+      </div>
+    </div>
+  </div>
 
   <!-- HERO -->
   <section class="hero" id="hero">
@@ -75,8 +104,28 @@
     <div class="container">
       <h2 class="section-title">Download APK</h2>
       <p class="section-sub">File terbaru langsung dari server kami</p>
+      
+      <!-- APK Kami (dari R2) -->
+      <h3 class="apk-section-title">📦 APK Komunitas Kami</h3>
       <div class="apk-list" id="apkList">
         <p class="loading-text"><i class="fa-solid fa-spinner fa-spin"></i> Memuat daftar APK...</p>
+      </div>
+
+      <!-- APK Partner -->
+      <h3 class="apk-section-title">📦 APK Partner - Gran Emozion</h3>
+      <div class="apk-partner" id="apkPartner">
+        <div class="apk-card partner-card">
+          <div class="apk-info">
+            <div class="apk-icon partner-icon"><i class="fa-brands fa-discord"></i></div>
+            <div>
+              <div class="apk-name">Gran Emozion Community</div>
+              <div class="apk-meta">Download game dari komunitas partner kami</div>
+            </div>
+          </div>
+          <a href="#" class="btn-download" id="partnerDiscordBtn" target="_blank" rel="noopener">
+            <i class="fa-brands fa-discord"></i> Ke Discord
+          </a>
+        </div>
       </div>
     </div>
   </section>

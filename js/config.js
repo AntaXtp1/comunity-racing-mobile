@@ -11,38 +11,47 @@ const SITE_CONFIG = {
   about: {
     description: "Komunitas bagi para pecinta sim racing di platform mobile. Bergabunglah untuk berbagi setup, tips, dan adu kecepatan dengan racer terbaik.",
     platforms: ["Android", "iOS"],
-    games: ["Real Racing 3", "Grid Autosport", "Asphalt 9"],
+    games: ["Gran Velocita", "Gran Emozion", "Grid Autosport", "CPM 2", "CPM 1", "dll."],
     stats: [
-      { label: "Anggota", value: "500+" },
-      { label: "Game Aktif", value: "5" },
-      { label: "Event/Bulan", value: "4" }
+      { label: "Anggota", value: "400+" },
+      { label: "Game Aktif", value: "6+" }
     ]
   },
 
-  // Hirarki grup — 5 profil contoh
+  // Hirarki grup — 7 profil
   // Untuk ganti foto: ubah `avatar` ke path gambar, misal "assets/members/owner.jpg"
   // Avatar kosong "" = pakai placeholder silhouette
   members: [
-    { name: "[Owner Name]",  role: "Owner",     avatar: "" },
-    { name: "[Admin Name]",  role: "Admin",     avatar: "" },
-    { name: "[Mod Name]",    role: "Moderator", avatar: "" },
-    { name: "[Tester 1]",    role: "Tester",    avatar: "" },
-    { name: "[Tester 2]",    role: "Tester",    avatar: "" }
+    { name: "Xiaofan",  role: "Owner",       avatar: "" },
+    { name: "Anta",     role: "Admin",       avatar: "" },
+    { name: "Chennn",   role: "Admin",       avatar: "" },
+    { name: "Dayat",    role: "Admin",       avatar: "", initial: "D" },
+    { name: "Anta",     role: "Modder",      avatar: "" },
+    { name: "Hayzen",   role: "Contributor", avatar: "" },
+    { name: "Wa Min",   role: "Contributor", avatar: "" }
   ],
 
   // Warna badge per role
   roleColors: {
-    "Owner":     "#d4af37",  // gold
-    "Admin":     "#8b0000",  // dark red
-    "Moderator": "#4a4a4a",  // chrome gray
-    "Tester":    "#1e3a5f"   // dark blue
+    "Owner":       "#d4af37",  // gold
+    "Admin":       "#8b0000",  // dark red
+    "Modder":      "#4a4a4a",  // chrome gray
+    "Contributor": "#1e3a5f"   // dark blue
   },
 
   // Link sosial media (kosongkan "" untuk sembunyikan)
   social: {
-    youtube:  "https://youtube.com/@your-channel",
-    whatsapp: "https://chat.whatsapp.com/your-invite",
-    discord:  "https://discord.gg/your-invite"
+    discordMain:    "https://discord.gg/vQszJdfvZ",
+    discordPartner: "https://discord.gg/gran-emozione-community-1348404725732872272",
+    whatsapp:       "https://chat.whatsapp.com/G9XcVZZelwf7hrtXj58uqS",
+    youtube:        ""  // belum ada
+  },
+
+  // Partner APK (redirect ke Discord partner)
+  partnerApk: {
+    name: "Gran Emozion Community",
+    discord: "https://discord.gg/gran-emozione-community-1348404725732872272",
+    description: "Download game dari komunitas partner kami"
   },
 
   // URL Worker API

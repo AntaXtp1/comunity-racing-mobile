@@ -10,6 +10,9 @@ document.addEventListener('DOMContentLoaded', () => {
   renderFooter();
   setupNavbarToggle();
   setupNavbarScroll();
+  setupDiscordModal();
+  setupNavSocial();
+  setupPartnerApk();
   fetchApkList();
 });
 
@@ -54,9 +57,14 @@ function renderTeam() {
   const grid = document.getElementById('teamGrid');
   grid.innerHTML = SITE_CONFIG.members.map(m => {
     const color = SITE_CONFIG.roleColors[m.role] || '#5a5a60';
-    const avatarHtml = m.avatar
-      ? `<img src="${m.avatar}" alt="${m.name}" loading="lazy">`
-      : `<i class="fa-solid fa-user placeholder"></i>`;
+    let avatarHtml;
+    if (m.avatar) {
+      avatarHtml = `<img src="${m.avatar}" alt="${m.name}" loading="lazy">`;
+    } else if (m.initial) {
+      avatarHtml = `<div class="placeholder initial">${m.initial}</div>`;
+    } else {
+      avatarHtml = `<i class="fa-solid fa-user placeholder"></i>`;
+    }
     return `
       <div class="member-card" style="--role-color:${color}">
         <div class="member-avatar">${avatarHtml}</div>
@@ -73,20 +81,89 @@ function renderFooter() {
     `© ${new Date().getFullYear()} ${SITE_CONFIG.communityName}`;
 
   const icons = {
-    youtube:  'fa-brands fa-youtube',
-    whatsapp: 'fa-brands fa-whatsapp',
-    discord:  'fa-brands fa-discord'
+    discordMain:    'fa-brands fa-discord',
+    discordPartner: 'fa-brands fa-discord',
+    whatsapp:       'fa-brands fa-whatsapp',
+    youtube:        'fa-brands fa-youtube'
+  };
+
+  const labels = {
+    discordMain:    'Discord Gran Velocita',
+    discordPartner: 'Discord Gran Emozion',
+    whatsapp:       'WhatsApp',
+    youtube:        'YouTube'
   };
 
   const socialHtml = Object.entries(SITE_CONFIG.social)
     .filter(([, url]) => url)
     .map(([key, url]) => `
-      <a href="${url}" class="social-link" target="_blank" rel="noopener" aria-label="${key}">
+      <a href="${url}" class="social-link" target="_blank" rel="noopener" aria-label="${labels[key]}">
         <i class="${icons[key]}"></i>
       </a>
     `).join('');
 
   document.getElementById('footerSocial').innerHTML = socialHtml;
+}
+
+// ---- Discord Modal ----
+
+function setupDiscordModal() {
+  const modal      = document.getElementById('discordModal');
+  const btn        = document.getElementById('discordBtn');
+  const closeBtn   = document.getElementById('discordModalClose');
+  const mainLink   = document.getElementById('discordMainLink');
+  const partnerLink = document.getElementById('discordPartnerLink');
+
+  // Set URLs
+  mainLink.href   = SITE_CONFIG.social.discordMain;
+  partnerLink.href = SITE_CONFIG.social.discordPartner;
+
+  // Open modal
+  btn.addEventListener('click', () => {
+    modal.classList.add('active');
+  });
+
+  // Close modal
+  closeBtn.addEventListener('click', () => {
+    modal.classList.remove('active');
+  });
+
+  // Close on backdrop click
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.classList.remove('active');
+  });
+
+  // Close on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('active')) {
+      modal.classList.remove('active');
+    }
+  });
+}
+
+// ---- Nav Social Icons ----
+
+function setupNavSocial() {
+  const whatsappIcon = document.getElementById('whatsappIcon');
+  const youtubeIcon  = document.getElementById('youtubeIcon');
+
+  if (SITE_CONFIG.social.whatsapp) {
+    whatsappIcon.href = SITE_CONFIG.social.whatsapp;
+  } else {
+    whatsappIcon.style.display = 'none';
+  }
+
+  if (SITE_CONFIG.social.youtube) {
+    youtubeIcon.href = SITE_CONFIG.social.youtube;
+    youtubeIcon.style.display = 'flex';
+  }
+}
+
+// ---- Partner APK ----
+
+function setupPartnerApk() {
+  const btn = document.getElementById('partnerDiscordBtn');
+  btn.href = SITE_CONFIG.partnerApk.discord;
 }
 
 // ---- Navbar interactions ----

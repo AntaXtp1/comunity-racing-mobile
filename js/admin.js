@@ -283,7 +283,7 @@ async function handleUpload(file) {
   if (cancelBtn) cancelBtn.style.display = 'inline-flex';
 
   try {
-    // 1. Minta presigned URL dari Worker
+    // 1. Minta presigned POST data dari Worker
     const presignRes = await authFetch('/api/presign', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -295,21 +295,27 @@ async function handleUpload(file) {
       throw new Error(errData.error || 'Gagal mempersiapkan upload');
     }
 
-    const { url } = await presignRes.json();
+    const { url, fields } = await presignRes.json();
 
-    // 2. Upload langsung ke R2 pakai presigned URL (bypass Worker!)
+    // 2. Buat FormData dengan policy fields + file
+    const formData = new FormData();
+    for (const [key, value] of Object.entries(fields)) {
+      formData.append(key, value);
+    }
+    formData.append('file', file);
+
+    // 3. Upload langsung ke R2 pakai POST (simple method, no CORS preflight!)
     labelEl.textContent = `Mengupload ${file.name}...`;
 
     return new Promise((resolve) => {
       const xhr = new XMLHttpRequest();
       currentXhr = xhr;
 
-      // Set timeout — 10 menit max
-      xhr.timeout = 600000;
+      // Timeout 30 menit untuk file 1GB+
+      xhr.timeout = 1800000;
 
-      xhr.open('PUT', url);
-      // JANGAN set Content-Type — biar "simple request" tanpa CORS preflight
-      // R2 akan otomatis detect content type dari file
+      xhr.open('POST', url);
+      // TIDAK perlu set header apapun — FormData otomatis set Content-Type multipart
 
       xhr.upload.onprogress = e => {
         if (e.lengthComputable) {
@@ -324,6 +330,7 @@ async function handleUpload(file) {
         progressEl.hidden = true;
         if (cancelBtn) cancelBtn.style.display = 'none';
 
+        // R2 POST success = 204 No Content
         if (xhr.status >= 200 && xhr.status < 300) {
           showUploadResult('success', `✓ ${file.name} berhasil diupload`);
           loadFileList();
@@ -334,7 +341,7 @@ async function handleUpload(file) {
         }
       };
 
-      xhr.onerror = (e) => {
+      xhr.onerror = () => {
         currentXhr = null;
         // Fallback: coba upload via Worker
         fallbackUploadViaWorker(file, progressEl, fillEl, labelEl, cancelBtn, resolve);
@@ -356,7 +363,7 @@ async function handleUpload(file) {
         resolve();
       };
 
-      xhr.send(file);
+      xhr.send(formData);
     });
 
   } catch (err) {

@@ -211,8 +211,9 @@ async function handlePresign(request, env, cors) {
   }
 
   try {
-    const url = await generatePresignedUrl(env, safeName);
-    return jsonResponse({ url, fileName: safeName }, 200, cors);
+    // Generate presigned POST (not PUT) — POST is "simple method", no CORS preflight!
+    const data = await generatePresignedPost(env, safeName);
+    return jsonResponse({ ...data, fileName: safeName }, 200, cors);
   } catch (err) {
     console.error('[Presign error]', err);
     return jsonResponse({ error: 'Gagal generate presigned URL' }, 500, cors);
@@ -397,48 +398,58 @@ function timingSafeEqual(a, b) {
 // PRESIGNED URL GENERATION (AWS Signature V4)
 // ============================================================
 
-async function generatePresignedUrl(env, fileName) {
+async function generatePresignedPost(env, fileName) {
   const accessKeyId     = env.R2_ACCESS_KEY_ID;
   const secretAccessKey = env.R2_SECRET_ACCESS_KEY;
   const endpoint        = env.R2_ENDPOINT;
   const bucket          = env.R2_BUCKET_NAME || 'srmc-apks';
-  const region          = 'auto'; // R2 uses 'auto' for region
+  const region          = 'auto';
 
   if (!accessKeyId || !secretAccessKey || !endpoint) {
     throw new Error('R2 credentials not configured');
   }
 
   const now = new Date();
-  const dateStamp = now.toISOString().split('T')[0].replace(/-/g, '');
-  const amzDate   = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-  const expires   = 3600; // 1 hour
+  const dateStamp   = now.toISOString().split('T')[0].replace(/-/g, '');
+  const amzDate     = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const expiration  = new Date(now.getTime() + 3600000).toISOString(); // 1 hour
 
   const host = endpoint.replace('https://', '');
-  const key  = `${bucket}/${fileName}`;
-
-  // Canonical request
-  const method = 'PUT';
-  const canonicalUri = `/${key}`;
-  const canonicalQueryString = `X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=${encodeURIComponent(accessKeyId + '/' + dateStamp + '/' + region + '/s3/aws4_request')}&X-Amz-Date=${amzDate}&X-Amz-Expires=${expires}&X-Amz-SignedHeaders=host`;
-  const canonicalHeaders = `host:${host}\n`;
-  const signedHeaders = 'host';
-  const payloadHash = 'UNSIGNED-PAYLOAD';
-
-  const canonicalRequest = `${method}\n${canonicalUri}\n${canonicalQueryString}\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
-
-  // String to sign
-  const algorithm = 'AWS4-HMAC-SHA256';
   const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
-  const canonicalRequestHash = await sha256(canonicalRequest);
-  const stringToSign = `${algorithm}\n${amzDate}\n${credentialScope}\n${canonicalRequestHash}`;
 
-  // Signing key
+  // Policy document — specifies allowed conditions
+  const policy = {
+    expiration: expiration,
+    conditions: [
+      { bucket: bucket },
+      ["starts-with", "$key", ""],
+      ["content-length-range", 0, 2147483648], // Max 2GB
+      { "x-amz-algorithm": "AWS4-HMAC-SHA256" },
+      { "x-amz-credential": `${accessKeyId}/${credentialScope}` },
+      { "x-amz-date": amzDate }
+    ]
+  };
+
+  // Base64 encode policy
+  const policyJson   = JSON.stringify(policy);
+  const policyBase64 = btoa(policyJson);
+
+  // Sign the policy
   const signingKey = await getSignatureKey(secretAccessKey, dateStamp, region, 's3');
-  const signature = await hmacSha256(signingKey, stringToSign);
+  const signature  = await hmacSha256(signingKey, policyBase64);
 
-  // Final URL
-  const signedUrl = `${endpoint}/${key}?${canonicalQueryString}&X-Amz-Signature=${signature}`;
-  return signedUrl;
+  // Return URL + form fields for browser POST
+  return {
+    url: `${endpoint}/${bucket}`,
+    fields: {
+      'key':                  fileName,
+      'x-amz-algorithm':     'AWS4-HMAC-SHA256',
+      'x-amz-credential':    `${accessKeyId}/${credentialScope}`,
+      'x-amz-date':          amzDate,
+      'x-amz-signature':     signature,
+      'policy':              policyBase64
+    }
+  };
 }
 
 async function sha256(message) {

@@ -129,11 +129,22 @@ ul  { list-style: none; }
   padding:    4px 8px;
 }
 
-/* Nav social icons */
+/* Nav social icons (desktop — inline in navbar) */
 .nav-social {
   display:     flex;
   align-items: center;
   gap:         12px;
+}
+
+/* Social icons inside dropdown menu — hidden on desktop, visible on mobile */
+.nav-links-sep {
+  display: none;
+}
+
+.nav-links-social {
+  display: none;
+  align-items: center;
+  gap: 12px;
 }
 
 .nav-icon {
@@ -765,8 +776,20 @@ ul  { list-style: none; }
 
   .nav-links.active { transform: translateY(0); }
 
-  /* Hide social icons from navbar on mobile — prevent overflow */
+  /* Hide desktop social icons from navbar on mobile */
   .nav-social { display: none; }
+
+  /* Show social icons + divider inside dropdown menu on mobile */
+  .nav-links-sep {
+    display: block;
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+
+  .nav-links-social {
+    display: flex;
+  }
 
   .nav-logo {
     font-size: 1rem;

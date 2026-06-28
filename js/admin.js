@@ -154,24 +154,27 @@ async function loadFileList() {
       return;
     }
 
-    listEl.innerHTML = files.map(f => `
-      <div class="file-row" id="row-${escapeId(f.name)}">
+    listEl.innerHTML = files.map(f => {
+      const displayName = truncateFileName(f.name, 35);
+      const safeId = escapeId(f.name);
+      return `
+      <div class="file-row" id="row-${safeId}">
         <div class="file-info">
           <div class="file-icon"><i class="fa-brands fa-android"></i></div>
           <div class="file-details">
-            <div class="file-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
+            <div class="file-name" title="${escapeHtml(f.name)}">${escapeHtml(displayName)}</div>
             <div class="file-meta">${formatSize(f.size)} &bull; ${formatDate(f.uploaded)}</div>
           </div>
         </div>
-        <button class="btn-delete" data-name="${escapeHtml(f.name)}">
+        <button class="btn-delete" data-name="${escapeHtml(f.name)}" data-id="${safeId}">
           <i class="fa-solid fa-trash"></i> Hapus
         </button>
       </div>
-    `).join('');
+    `}).join('');
 
     // Wire delete buttons
     listEl.querySelectorAll('.btn-delete').forEach(btn => {
-      btn.addEventListener('click', () => handleDelete(btn.dataset.name, btn));
+      btn.addEventListener('click', () => handleDelete(btn.dataset.name, btn.dataset.id, btn));
     });
 
   } catch (err) {
@@ -182,7 +185,7 @@ async function loadFileList() {
 
 // ---- Delete ----
 
-async function handleDelete(name, btn) {
+async function handleDelete(name, rowId, btn) {
   if (!confirm(`Hapus "${name}"?\nFile tidak bisa dikembalikan.`)) return;
 
   btn.disabled = true;
@@ -198,8 +201,8 @@ async function handleDelete(name, btn) {
       throw new Error(data.error || 'Gagal menghapus');
     }
 
-    // Remove row smoothly
-    const row = document.getElementById(`row-${escapeId(name)}`);
+    // Remove row smoothly using rowId
+    const row = document.getElementById(`row-${rowId}`);
     if (row) row.remove();
 
     // Reload storage after delete
@@ -282,6 +285,16 @@ async function handleUpload(file) {
   labelEl.textContent = `Mempersiapkan upload ${file.name}...`;
   if (cancelBtn) cancelBtn.style.display = 'inline-flex';
 
+  // Enable cancel button
+  if (cancelBtn) {
+    cancelBtn.onclick = () => {
+      if (currentXhr) {
+        currentXhr.abort();
+        currentXhr = null;
+      }
+    };
+  }
+
   try {
     // 1. Minta presigned POST data dari Worker
     const presignRes = await authFetch('/api/presign', {
@@ -305,7 +318,8 @@ async function handleUpload(file) {
     formData.append('file', file);
 
     // 3. Upload langsung ke R2 pakai POST (simple method, no CORS preflight!)
-    labelEl.textContent = `Mengupload ${file.name}...`;
+    const fileSizeMB = (file.size / 1048576).toFixed(1);
+    labelEl.textContent = `Mengupload ${file.name} (${fileSizeMB} MB)...`;
 
     return new Promise((resolve) => {
       const xhr = new XMLHttpRequest();
@@ -315,13 +329,30 @@ async function handleUpload(file) {
       xhr.timeout = 1800000;
 
       xhr.open('POST', url);
-      // TIDAK perlu set header apapun — FormData otomatis set Content-Type multipart
+
+      // Progress tracking yang lebih baik
+      let lastPct = 0;
+      let startTime = Date.now();
 
       xhr.upload.onprogress = e => {
         if (e.lengthComputable) {
           const pct = Math.round((e.loaded / e.total) * 100);
-          fillEl.style.width  = `${pct}%`;
-          labelEl.textContent = `Mengupload ${pct}% — ${file.name}`;
+          const elapsed = (Date.now() - startTime) / 1000; // detik
+          const speed = e.loaded / elapsed; // bytes per detik
+          const remaining = (e.total - e.loaded) / speed; // detik tersisa
+
+          fillEl.style.width = `${pct}%`;
+
+          // Format ETA
+          let etaText = '';
+          if (remaining > 60) {
+            etaText = ` (${Math.ceil(remaining / 60)} menit lagi)`;
+          } else if (remaining > 0) {
+            etaText = ` (${Math.ceil(remaining)} detik lagi)`;
+          }
+
+          labelEl.textContent = `Mengupload ${pct}% — ${etaText}`;
+          lastPct = pct;
         }
       };
 
@@ -332,7 +363,7 @@ async function handleUpload(file) {
 
         // R2 POST success = 204 No Content
         if (xhr.status >= 200 && xhr.status < 300) {
-          showUploadResult('success', `✓ ${file.name} berhasil diupload`);
+          showUploadResult('success', `✓ ${file.name} berhasil diupload (${fileSizeMB} MB)`);
           loadFileList();
           loadStorageInfo();
         } else {
@@ -450,4 +481,12 @@ function escapeHtml(str) {
 
 function escapeId(str) {
   return String(str).replace(/[^a-zA-Z0-9-_]/g, '_');
+}
+
+function truncateFileName(name, maxLen) {
+  if (name.length <= maxLen) return name;
+  const ext = name.split('.').pop();
+  const baseName = name.substring(0, name.length - ext.length - 1);
+  const truncated = baseName.substring(0, maxLen - ext.length - 4) + '...';
+  return truncated + '.' + ext;
 }

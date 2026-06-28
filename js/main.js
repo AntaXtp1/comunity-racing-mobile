@@ -114,7 +114,6 @@ function renderFooter() {
 function setupDiscordModal() {
   const modal      = document.getElementById('discordModal');
   const btn        = document.getElementById('discordBtn');
-  const btnMobile  = document.getElementById('discordBtnMobile');
   const closeBtn   = document.getElementById('discordModalClose');
   const mainLink   = document.getElementById('discordMainLink');
   const partnerLink = document.getElementById('discordPartnerLink');
@@ -123,11 +122,9 @@ function setupDiscordModal() {
   mainLink.href   = SITE_CONFIG.social.discordMain;
   partnerLink.href = SITE_CONFIG.social.discordPartner;
 
-  // Open modal (desktop + mobile buttons)
-  [btn, btnMobile].forEach(b => {
-    b.addEventListener('click', () => {
-      modal.classList.add('active');
-    });
+  // Open modal
+  btn.addEventListener('click', () => {
+    modal.classList.add('active');
   });
 
   // Close modal
@@ -151,7 +148,6 @@ function setupDiscordModal() {
 // ---- Nav Social Icons ----
 
 function setupNavSocial() {
-  // Desktop icons
   const whatsappIcon = document.getElementById('whatsappIcon');
   const youtubeIcon  = document.getElementById('youtubeIcon');
 
@@ -164,21 +160,6 @@ function setupNavSocial() {
   if (SITE_CONFIG.social.youtube) {
     youtubeIcon.href = SITE_CONFIG.social.youtube;
     youtubeIcon.style.display = 'flex';
-  }
-
-  // Mobile icons (inside dropdown menu)
-  const whatsappMobile = document.getElementById('whatsappIconMobile');
-  const youtubeMobile  = document.getElementById('youtubeIconMobile');
-
-  if (SITE_CONFIG.social.whatsapp) {
-    whatsappMobile.href = SITE_CONFIG.social.whatsapp;
-  } else {
-    whatsappMobile.style.display = 'none';
-  }
-
-  if (SITE_CONFIG.social.youtube) {
-    youtubeMobile.href = SITE_CONFIG.social.youtube;
-    youtubeMobile.style.display = 'flex';
   }
 }
 
@@ -194,25 +175,16 @@ function setupPartnerApk() {
 function setupLanguageToggle() {
   const btn   = document.getElementById('langToggle');
   const label = document.getElementById('langLabel');
-  const btnMobile   = document.getElementById('langToggleMobile');
-  const labelMobile = document.getElementById('langLabelMobile');
-  
+
   // Set initial label
-  const labelText = currentLang === 'id' ? 'EN' : 'ID';
-  label.textContent = labelText;
-  labelMobile.textContent = labelText;
-  
-  const toggleLang = () => {
+  label.textContent = currentLang === 'id' ? 'EN' : 'ID';
+
+  btn.addEventListener('click', () => {
     currentLang = currentLang === 'id' ? 'en' : 'id';
     localStorage.setItem('lang', currentLang);
-    const txt = currentLang === 'id' ? 'EN' : 'ID';
-    label.textContent = txt;
-    labelMobile.textContent = txt;
+    label.textContent = currentLang === 'id' ? 'EN' : 'ID';
     applyLanguage(currentLang);
-  };
-
-  btn.addEventListener('click', toggleLang);
-  btnMobile.addEventListener('click', toggleLang);
+  });
 }
 
 function applyLanguage(lang) {

@@ -129,22 +129,11 @@ ul  { list-style: none; }
   padding:    4px 8px;
 }
 
-/* Nav social icons (desktop — inline in navbar) */
+/* Nav social icons */
 .nav-social {
   display:     flex;
   align-items: center;
   gap:         12px;
-}
-
-/* Social icons inside dropdown menu — hidden on desktop, visible on mobile */
-.nav-links-sep {
-  display: none;
-}
-
-.nav-links-social {
-  display: none;
-  align-items: center;
-  gap: 12px;
 }
 
 .nav-icon {
@@ -776,27 +765,31 @@ ul  { list-style: none; }
 
   .nav-links.active { transform: translateY(0); }
 
-  /* Hide desktop social icons from navbar on mobile */
-  .nav-social { display: none; }
-
-  /* Show social icons + divider inside dropdown menu on mobile */
-  .nav-links-sep {
-    display: block;
-    height: 1px;
-    background: var(--border);
-    margin: 4px 0;
-  }
-
-  .nav-links-social {
-    display: flex;
-  }
-
+  /* Logo dikecilkan biar kasih ruang untuk icon */
   .nav-logo {
-    font-size: 1rem;
-    max-width: 55%;
-    overflow: hidden;
+    font-size:     0.95rem;
+    max-width:     35%;
+    overflow:      hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space:   nowrap;
+    flex-shrink:   0;
+  }
+
+  /* Social icons dikecilkan untuk muat di navbar mobile */
+  .nav-social {
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .nav-icon {
+    width:     30px;
+    height:    30px;
+    font-size: 0.9rem;
+  }
+
+  .lang-toggle {
+    padding:   4px 8px;
+    font-size: 0.75rem;
   }
 
   .section        { padding: 64px 16px; }

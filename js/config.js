@@ -45,7 +45,6 @@ const SITE_CONFIG = {
     discord:  "https://discord.gg/your-invite"
   },
 
-  // URL Worker API — isi dengan URL Worker setelah deploy
-  // Contoh: "https://srmc-worker.your-username.workers.dev"
-  apiBaseUrl: "http://localhost:8787"
+  // URL Worker API
+  apiBaseUrl: "https://srmc-worker.antarahimmuhammad.workers.dev"
 };

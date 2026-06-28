@@ -308,8 +308,8 @@ async function handleUpload(file) {
       xhr.timeout = 600000;
 
       xhr.open('PUT', url);
-      // Set Content-Type supaya R2 menerima file dengan benar
-      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+      // JANGAN set Content-Type — biar "simple request" tanpa CORS preflight
+      // R2 akan otomatis detect content type dari file
 
       xhr.upload.onprogress = e => {
         if (e.lengthComputable) {
@@ -334,11 +334,16 @@ async function handleUpload(file) {
         resolve();
       };
 
-      xhr.onerror = () => {
+      xhr.onerror = (e) => {
         currentXhr = null;
         progressEl.hidden = true;
         if (cancelBtn) cancelBtn.style.display = 'none';
-        showUploadResult('error', '✗ Koneksi gagal. Cek internet atau coba upload dari dashboard R2.');
+        // Only show error if request actually completed
+        if (xhr.readyState === 4) {
+          showUploadResult('error', `✗ Upload gagal (HTTP ${xhr.status}). Coba upload dari dashboard R2.`);
+        } else {
+          showUploadResult('error', '✗ Koneksi terputus. Cek internet atau coba upload dari dashboard R2.');
+        }
         resolve();
       };
 

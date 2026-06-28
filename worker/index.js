@@ -101,7 +101,7 @@ export default {
       if (method === 'DELETE' && path === '/api/upload/abort')       return handleMultipartAbort(request, env, allHeaders);
       
       if (method === 'DELETE' && path.startsWith('/api/delete/'))   return handleDelete(request, path, env, allHeaders);
-      if (method === 'GET'    && path === '/api/storage')            return handleStorage(env, allHeaders);
+      if (method === 'GET'    && path === '/api/storage')            return handleStorage(request, env, allHeaders);
 
       return jsonResponse({ error: 'Not found' }, 404, allHeaders);
     } catch (err) {
@@ -243,10 +243,10 @@ async function handleDelete(request, path, env, cors) {
   return jsonResponse({ success: true, deleted: name }, 200, cors);
 }
 
-async function handleStorage(env, cors) {
-  const authErr = await requireAuthFromRequest(env, cors);
-  // handleStorage is GET so we receive request differently — skip for now, use token check from header manually
-  // (This is called via authFetch in admin.js which sets Authorization header)
+async function handleStorage(request, env, cors) {
+  // Verify token properly
+  const authErr = await requireAuth(request, env, cors);
+  if (authErr) return authErr;
 
   const TOTAL_BYTES = 10 * 1024 * 1024 * 1024; // 10 GB R2 free tier
 

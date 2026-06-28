@@ -403,7 +403,11 @@ body {
   flex-shrink:     0;
 }
 
-.file-details { min-width: 0; }
+.file-details { 
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
 
 .file-name {
   font-weight:   600;
@@ -412,6 +416,7 @@ body {
   text-overflow: ellipsis;
   white-space:   nowrap;
   font-size:     0.95rem;
+  max-width:     500px;
 }
 
 .file-meta {

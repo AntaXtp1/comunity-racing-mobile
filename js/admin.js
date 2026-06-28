@@ -285,16 +285,24 @@ async function handleUpload(file) {
   labelEl.textContent = `Mempersiapkan upload ${file.name}...`;
   if (cancelBtn) cancelBtn.style.display = 'inline-flex';
 
-  // Enable cancel button
-  if (cancelBtn) {
-    cancelBtn.onclick = () => {
-      if (currentXhr) {
-        currentXhr.abort();
-        currentXhr = null;
-      }
-    };
-  }
+  const fileSizeMB = (file.size / 1048576).toFixed(1);
+  const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB per chunk
+  const FILE_SIZE_THRESHOLD = 100 * 1024 * 1024; // 100MB threshold for multipart
 
+  // Decide upload strategy based on file size
+  if (file.size > FILE_SIZE_THRESHOLD) {
+    // Use multipart upload for large files
+    return handleMultipartUpload(file, progressEl, fillEl, labelEl, cancelBtn);
+  } else {
+    // Use regular upload for small files
+    return handleRegularUpload(file, progressEl, fillEl, labelEl, cancelBtn);
+  }
+}
+
+// Regular upload for files <100MB
+async function handleRegularUpload(file, progressEl, fillEl, labelEl, cancelBtn) {
+  const fileSizeMB = (file.size / 1048576).toFixed(1);
+  
   try {
     // 1. Minta presigned POST data dari Worker
     const presignRes = await authFetch('/api/presign', {
@@ -317,33 +325,26 @@ async function handleUpload(file) {
     }
     formData.append('file', file);
 
-    // 3. Upload langsung ke R2 pakai POST (simple method, no CORS preflight!)
-    const fileSizeMB = (file.size / 1048576).toFixed(1);
+    // 3. Upload langsung ke R2 pakai POST
     labelEl.textContent = `Mengupload ${file.name} (${fileSizeMB} MB)...`;
 
     return new Promise((resolve) => {
       const xhr = new XMLHttpRequest();
       currentXhr = xhr;
-
-      // Timeout 30 menit untuk file 1GB+
       xhr.timeout = 1800000;
-
       xhr.open('POST', url);
 
-      // Progress tracking yang lebih baik
-      let lastPct = 0;
       let startTime = Date.now();
 
       xhr.upload.onprogress = e => {
         if (e.lengthComputable) {
           const pct = Math.round((e.loaded / e.total) * 100);
-          const elapsed = (Date.now() - startTime) / 1000; // detik
-          const speed = e.loaded / elapsed; // bytes per detik
-          const remaining = (e.total - e.loaded) / speed; // detik tersisa
+          const elapsed = (Date.now() - startTime) / 1000;
+          const speed = e.loaded / elapsed;
+          const remaining = (e.total - e.loaded) / speed;
 
           fillEl.style.width = `${pct}%`;
 
-          // Format ETA
           let etaText = '';
           if (remaining > 60) {
             etaText = ` (${Math.ceil(remaining / 60)} menit lagi)`;
@@ -351,8 +352,7 @@ async function handleUpload(file) {
             etaText = ` (${Math.ceil(remaining)} detik lagi)`;
           }
 
-          labelEl.textContent = `Mengupload ${pct}% — ${etaText}`;
-          lastPct = pct;
+          labelEl.textContent = `Mengupload ${pct}%${etaText}`;
         }
       };
 
@@ -361,20 +361,17 @@ async function handleUpload(file) {
         progressEl.hidden = true;
         if (cancelBtn) cancelBtn.style.display = 'none';
 
-        // R2 POST success = 204 No Content
         if (xhr.status >= 200 && xhr.status < 300) {
           showUploadResult('success', `✓ ${file.name} berhasil diupload (${fileSizeMB} MB)`);
           loadFileList();
           loadStorageInfo();
         } else {
-          // Fallback: coba upload via Worker
           fallbackUploadViaWorker(file, progressEl, fillEl, labelEl, cancelBtn, resolve);
         }
       };
 
       xhr.onerror = () => {
         currentXhr = null;
-        // Fallback: coba upload via Worker
         fallbackUploadViaWorker(file, progressEl, fillEl, labelEl, cancelBtn, resolve);
       };
 
@@ -382,7 +379,7 @@ async function handleUpload(file) {
         currentXhr = null;
         progressEl.hidden = true;
         if (cancelBtn) cancelBtn.style.display = 'none';
-        showUploadResult('error', '✗ Upload timeout. File terlalu besar atau koneksi lambat. Coba upload dari dashboard R2.');
+        showUploadResult('error', '✗ Upload timeout. Coba lagi atau gunakan dashboard R2.');
         resolve();
       };
 
@@ -401,6 +398,150 @@ async function handleUpload(file) {
     progressEl.hidden = true;
     if (cancelBtn) cancelBtn.style.display = 'none';
     showUploadResult('error', `✗ ${err.message}`);
+  }
+}
+
+// Multipart upload for files >100MB
+let currentMultipartSession = null;
+
+async function handleMultipartUpload(file, progressEl, fillEl, labelEl, cancelBtn) {
+  const fileSizeMB = (file.size / 1048576).toFixed(1);
+  const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB chunks
+  
+  labelEl.textContent = `Mempersiapkan upload multipart (${fileSizeMB} MB)...`;
+
+  try {
+    // 1. Initialize multipart upload
+    const initRes = await authFetch('/api/upload/init', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: file.name })
+    });
+
+    if (!initRes.ok) {
+      const errData = await initRes.json().catch(() => ({}));
+      throw new Error(errData.error || 'Gagal memulai upload');
+    }
+
+    const { uploadId, key } = await initRes.json();
+    currentMultipartSession = { uploadId, key };
+
+    // 2. Upload chunks
+    const totalParts = Math.ceil(file.size / CHUNK_SIZE);
+    const parts = [];
+    let uploadedBytes = 0;
+    const startTime = Date.now();
+
+    for (let i = 0; i < totalParts; i++) {
+      const start = i * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunk = file.slice(start, end);
+      const partNumber = i + 1;
+
+      labelEl.textContent = `Mengupload part ${partNumber}/${totalParts} (${fileSizeMB} MB)...`;
+
+      const partRes = await authFetch(
+        `/api/upload/part?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`,
+        {
+          method: 'PUT',
+          body: chunk
+        }
+      );
+
+      if (!partRes.ok) {
+        throw new Error(`Gagal upload part ${partNumber}`);
+      }
+
+      const partData = await partRes.json();
+      parts.push({ partNumber: partData.partNumber, etag: partData.etag });
+
+      // Update progress
+      uploadedBytes += chunk.size;
+      const pct = Math.round((uploadedBytes / file.size) * 100);
+      fillEl.style.width = `${pct}%`;
+
+      // Calculate ETA
+      const elapsed = (Date.now() - startTime) / 1000;
+      const speed = uploadedBytes / elapsed;
+      const remaining = (file.size - uploadedBytes) / speed;
+
+      let etaText = '';
+      if (remaining > 60) {
+        etaText = ` (${Math.ceil(remaining / 60)} menit lagi)`;
+      } else if (remaining > 0) {
+        etaText = ` (${Math.ceil(remaining)} detik lagi)`;
+      }
+
+      labelEl.textContent = `Mengupload ${pct}% (part ${partNumber}/${totalParts})${etaText}`;
+    }
+
+    // 3. Complete upload
+    labelEl.textContent = 'Menyelesaikan upload...';
+
+    const completeRes = await authFetch('/api/upload/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, uploadId, parts })
+    });
+
+    if (!completeRes.ok) {
+      const errData = await completeRes.json().catch(() => ({}));
+      throw new Error(errData.error || 'Gagal menyelesaikan upload');
+    }
+
+    currentMultipartSession = null;
+    progressEl.hidden = true;
+    if (cancelBtn) cancelBtn.style.display = 'none';
+
+    showUploadResult('success', `✓ ${file.name} berhasil diupload (${fileSizeMB} MB)`);
+    loadFileList();
+    loadStorageInfo();
+
+  } catch (err) {
+    // Abort multipart upload on error
+    if (currentMultipartSession) {
+      try {
+        await authFetch('/api/upload/abort', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            key: currentMultipartSession.key,
+            uploadId: currentMultipartSession.uploadId
+          })
+        });
+      } catch (abortErr) {
+        console.error('[Abort error]', abortErr);
+      }
+      currentMultipartSession = null;
+    }
+
+    progressEl.hidden = true;
+    if (cancelBtn) cancelBtn.style.display = 'none';
+    showUploadResult('error', `✗ ${err.message}`);
+  }
+
+  // Setup cancel button for multipart
+  if (cancelBtn) {
+    cancelBtn.onclick = async () => {
+      if (currentMultipartSession) {
+        try {
+          await authFetch('/api/upload/abort', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              key: currentMultipartSession.key,
+              uploadId: currentMultipartSession.uploadId
+            })
+          });
+          currentMultipartSession = null;
+        } catch (err) {
+          console.error('[Cancel error]', err);
+        }
+        progressEl.hidden = true;
+        cancelBtn.style.display = 'none';
+        showUploadResult('error', '✗ Upload dibatalkan.');
+      }
+    };
   }
 }
 

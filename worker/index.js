@@ -93,6 +93,13 @@ export default {
       // Protected routes (auth required)
       if (method === 'POST'   && path === '/api/upload')             return handleUpload(request, env, allHeaders);
       if (method === 'POST'   && path === '/api/presign')            return handlePresign(request, env, allHeaders);
+      
+      // Multipart upload endpoints (for large files >100MB)
+      if (method === 'POST'   && path === '/api/upload/init')        return handleMultipartInit(request, env, allHeaders);
+      if (method === 'PUT'    && path === '/api/upload/part')        return handleMultipartPart(request, env, allHeaders, url);
+      if (method === 'POST'   && path === '/api/upload/complete')    return handleMultipartComplete(request, env, allHeaders);
+      if (method === 'DELETE' && path === '/api/upload/abort')       return handleMultipartAbort(request, env, allHeaders);
+      
       if (method === 'DELETE' && path.startsWith('/api/delete/'))   return handleDelete(request, path, env, allHeaders);
       if (method === 'GET'    && path === '/api/storage')            return handleStorage(env, allHeaders);
 
@@ -276,6 +283,148 @@ async function handleStorage(env, cors) {
     totalBytes:  TOTAL_BYTES,
     percentage:  (usedBytes / TOTAL_BYTES) * 100
   }, 200, cors);
+}
+
+// ============================================================
+// MULTIPART UPLOAD HANDLERS (for files >100MB)
+// ============================================================
+
+async function handleMultipartInit(request, env, cors) {
+  const authErr = await requireAuth(request, env, cors);
+  if (authErr) return authErr;
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: 'Request body tidak valid' }, 400, cors);
+  }
+
+  const { filename } = body;
+  if (!filename) return jsonResponse({ error: 'filename diperlukan' }, 400, cors);
+
+  // Sanitize filename
+  const safeName = filename.replace(/[^a-zA-Z0-9._\-\s()]/g, '_').replace(/\.\./g, '_');
+  if (!safeName || !safeName.includes('.')) {
+    return jsonResponse({ error: 'Nama file tidak valid' }, 400, cors);
+  }
+
+  try {
+    const multipartUpload = await env.R2_BUCKET.createMultipartUpload(safeName);
+    return jsonResponse({
+      uploadId: multipartUpload.uploadId,
+      key: safeName
+    }, 200, cors);
+  } catch (err) {
+    console.error('[Multipart init error]', err);
+    return jsonResponse({ error: 'Gagal memulai upload' }, 500, cors);
+  }
+}
+
+async function handleMultipartPart(request, env, cors, url) {
+  const authErr = await requireAuth(request, env, cors);
+  if (authErr) return authErr;
+
+  const { key, uploadId, partNumber } = Object.fromEntries(url.searchParams);
+  
+  if (!key || !uploadId || !partNumber) {
+    return jsonResponse({ error: 'key, uploadId, dan partNumber diperlukan' }, 400, cors);
+  }
+
+  const partNum = Number(partNumber);
+  if (isNaN(partNum) || partNum < 1 || partNum > 10000) {
+    return jsonResponse({ error: 'partNumber tidak valid (harus 1-10000)' }, 400, cors);
+  }
+
+  try {
+    const multipartUpload = env.R2_BUCKET.resumeMultipartUpload(key, uploadId);
+    
+    // Read chunk data from request body
+    const chunkData = await request.arrayBuffer();
+    
+    // Upload this part
+    const uploadedPart = await multipartUpload.uploadPart(partNum, chunkData);
+    
+    return jsonResponse({
+      partNumber: partNum,
+      etag: uploadedPart.etag
+    }, 200, cors);
+  } catch (err) {
+    console.error('[Multipart part error]', err);
+    return jsonResponse({ error: `Gagal upload part ${partNum}` }, 500, cors);
+  }
+}
+
+async function handleMultipartComplete(request, env, cors) {
+  const authErr = await requireAuth(request, env, cors);
+  if (authErr) return authErr;
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: 'Request body tidak valid' }, 400, cors);
+  }
+
+  const { key, uploadId, parts } = body;
+  
+  if (!key || !uploadId || !parts || !Array.isArray(parts)) {
+    return jsonResponse({ error: 'key, uploadId, dan parts diperlukan' }, 400, cors);
+  }
+
+  // Validate parts array
+  for (const part of parts) {
+    if (!part.partNumber || !part.etag) {
+      return jsonResponse({ error: 'Setiap part harus memiliki partNumber dan etag' }, 400, cors);
+    }
+  }
+
+  try {
+    const multipartUpload = env.R2_BUCKET.resumeMultipartUpload(key, uploadId);
+    
+    // Complete the upload
+    await multipartUpload.complete(parts);
+    
+    return jsonResponse({
+      success: true,
+      key: key,
+      message: 'Upload selesai'
+    }, 200, cors);
+  } catch (err) {
+    console.error('[Multipart complete error]', err);
+    return jsonResponse({ error: 'Gagal menyelesaikan upload' }, 500, cors);
+  }
+}
+
+async function handleMultipartAbort(request, env, cors) {
+  const authErr = await requireAuth(request, env, cors);
+  if (authErr) return authErr;
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: 'Request body tidak valid' }, 400, cors);
+  }
+
+  const { key, uploadId } = body;
+  
+  if (!key || !uploadId) {
+    return jsonResponse({ error: 'key dan uploadId diperlukan' }, 400, cors);
+  }
+
+  try {
+    const multipartUpload = env.R2_BUCKET.resumeMultipartUpload(key, uploadId);
+    await multipartUpload.abort();
+    
+    return jsonResponse({
+      success: true,
+      message: 'Upload dibatalkan'
+    }, 200, cors);
+  } catch (err) {
+    console.error('[Multipart abort error]', err);
+    return jsonResponse({ error: 'Gagal membatalkan upload' }, 500, cors);
+  }
 }
 
 // ============================================================

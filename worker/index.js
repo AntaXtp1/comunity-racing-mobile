@@ -30,6 +30,7 @@ export default {
 
       // Protected routes (auth required)
       if (method === 'POST'   && path === '/api/upload')             return handleUpload(request, env, cors);
+      if (method === 'POST'   && path === '/api/presign')            return handlePresign(request, env, cors);
       if (method === 'DELETE' && path.startsWith('/api/delete/'))   return handleDelete(request, path, env, cors);
       if (method === 'GET'    && path === '/api/storage')            return handleStorage(env, cors);
 
@@ -119,6 +120,34 @@ async function handleUpload(request, env, cors) {
   });
 
   return jsonResponse({ success: true, name: file.name }, 200, cors);
+}
+
+async function handlePresign(request, env, cors) {
+  const authErr = await requireAuth(request, env, cors);
+  if (authErr) return authErr;
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: 'Request body tidak valid' }, 400, cors);
+  }
+
+  const { fileName } = body;
+  if (!fileName) return jsonResponse({ error: 'fileName diperlukan' }, 400, cors);
+
+  // Validasi ekstensi
+  if (!fileName.includes('.')) {
+    return jsonResponse({ error: 'File harus memiliki ekstensi' }, 400, cors);
+  }
+
+  try {
+    const url = await generatePresignedUrl(env, fileName);
+    return jsonResponse({ url, fileName }, 200, cors);
+  } catch (err) {
+    console.error('[Presign error]', err);
+    return jsonResponse({ error: 'Gagal generate presigned URL' }, 500, cors);
+  }
 }
 
 async function handleDelete(request, path, env, cors) {
@@ -274,6 +303,101 @@ function timingSafeEqual(a, b) {
     diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   }
   return diff === 0;
+}
+
+// ============================================================
+// PRESIGNED URL GENERATION (AWS Signature V4)
+// ============================================================
+
+async function generatePresignedUrl(env, fileName) {
+  const accessKeyId     = env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = env.R2_SECRET_ACCESS_KEY;
+  const endpoint        = env.R2_ENDPOINT;
+  const bucket          = env.R2_BUCKET_NAME || 'srmc-apks';
+  const region          = 'auto'; // R2 uses 'auto' for region
+
+  if (!accessKeyId || !secretAccessKey || !endpoint) {
+    throw new Error('R2 credentials not configured');
+  }
+
+  const now = new Date();
+  const dateStamp = now.toISOString().split('T')[0].replace(/-/g, '');
+  const amzDate   = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const expires   = 3600; // 1 hour
+
+  const host = endpoint.replace('https://', '');
+  const key  = `${bucket}/${fileName}`;
+
+  // Canonical request
+  const method = 'PUT';
+  const canonicalUri = `/${key}`;
+  const canonicalQueryString = `X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=${encodeURIComponent(accessKeyId + '/' + dateStamp + '/' + region + '/s3/aws4_request')}&X-Amz-Date=${amzDate}&X-Amz-Expires=${expires}&X-Amz-SignedHeaders=host`;
+  const canonicalHeaders = `host:${host}\n`;
+  const signedHeaders = 'host';
+  const payloadHash = 'UNSIGNED-PAYLOAD';
+
+  const canonicalRequest = `${method}\n${canonicalUri}\n${canonicalQueryString}\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
+
+  // String to sign
+  const algorithm = 'AWS4-HMAC-SHA256';
+  const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
+  const canonicalRequestHash = await sha256(canonicalRequest);
+  const stringToSign = `${algorithm}\n${amzDate}\n${credentialScope}\n${canonicalRequestHash}`;
+
+  // Signing key
+  const signingKey = await getSignatureKey(secretAccessKey, dateStamp, region, 's3');
+  const signature = await hmacSha256(signingKey, stringToSign);
+
+  // Final URL
+  const signedUrl = `${endpoint}/${key}?${canonicalQueryString}&X-Amz-Signature=${signature}`;
+  return signedUrl;
+}
+
+async function sha256(message) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return bufferToHex(hashBuffer);
+}
+
+async function hmacSha256(key, message) {
+  const encoder = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    typeof key === 'string' ? encoder.encode(key) : key,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(message));
+  return bufferToHex(signature);
+}
+
+async function getSignatureKey(key, dateStamp, regionName, serviceName) {
+  const encoder = new TextEncoder();
+  const kDate = await hmacSha256Raw('AWS4' + key, dateStamp);
+  const kRegion = await hmacSha256Raw(kDate, regionName);
+  const kService = await hmacSha256Raw(kRegion, serviceName);
+  const kSigning = await hmacSha256Raw(kService, 'aws4_request');
+  return kSigning;
+}
+
+async function hmacSha256Raw(key, message) {
+  const encoder = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    typeof key === 'string' ? encoder.encode(key) : key,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  return await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(message));
+}
+
+function bufferToHex(buffer) {
+  return Array.from(new Uint8Array(buffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 // ============================================================

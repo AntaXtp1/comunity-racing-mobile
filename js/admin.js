@@ -251,52 +251,66 @@ async function handleUpload(file) {
   const progressEl = document.getElementById('uploadProgress');
   const fillEl     = document.getElementById('uploadFill');
   const labelEl    = document.getElementById('uploadLabel');
-  const resultEl   = document.getElementById('uploadResult');
 
   progressEl.hidden = false;
-  resultEl.textContent = '';
   fillEl.style.width  = '0%';
-  labelEl.textContent = `Mengupload ${file.name}...`;
+  labelEl.textContent = `Mempersiapkan upload ${file.name}...`;
 
-  return new Promise((resolve) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', `${apiBase}/api/upload`);
+  try {
+    // 1. Minta presigned URL dari Worker
+    const presignRes = await authFetch('/api/presign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileName: file.name })
+    });
 
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    if (!presignRes.ok) {
+      const errData = await presignRes.json().catch(() => ({}));
+      throw new Error(errData.error || 'Gagal mempersiapkan upload');
+    }
 
-    xhr.upload.onprogress = e => {
-      if (e.lengthComputable) {
-        const pct = Math.round((e.loaded / e.total) * 100);
-        fillEl.style.width  = `${pct}%`;
-        labelEl.textContent = `Mengupload ${pct}% — ${file.name}`;
-      }
-    };
+    const { url } = await presignRes.json();
 
-    xhr.onload = () => {
-      progressEl.hidden = true;
-      if (xhr.status >= 200 && xhr.status < 300) {
-        showUploadResult('success', `✓ ${file.name} berhasil diupload`);
-        loadFileList();
-        loadStorageInfo();
-      } else {
-        let errMsg = 'Upload gagal';
-        try { errMsg = JSON.parse(xhr.responseText).error || errMsg; } catch {}
-        showUploadResult('error', `✗ ${errMsg}`);
-      }
-      resolve();
-    };
+    // 2. Upload langsung ke R2 pakai presigned URL (bypass Worker!)
+    labelEl.textContent = `Mengupload ${file.name}...`;
 
-    xhr.onerror = () => {
-      progressEl.hidden = true;
-      showUploadResult('error', '✗ Koneksi gagal. Coba lagi.');
-      resolve();
-    };
+    return new Promise((resolve) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', url);
 
-    const formData = new FormData();
-    formData.append('file', file, file.name);
-    xhr.send(formData);
-  });
+      xhr.upload.onprogress = e => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          fillEl.style.width  = `${pct}%`;
+          labelEl.textContent = `Mengupload ${pct}% — ${file.name}`;
+        }
+      };
+
+      xhr.onload = () => {
+        progressEl.hidden = true;
+        if (xhr.status >= 200 && xhr.status < 300) {
+          showUploadResult('success', `✓ ${file.name} berhasil diupload`);
+          loadFileList();
+          loadStorageInfo();
+        } else {
+          showUploadResult('error', `✗ Upload gagal (HTTP ${xhr.status})`);
+        }
+        resolve();
+      };
+
+      xhr.onerror = () => {
+        progressEl.hidden = true;
+        showUploadResult('error', '✗ Koneksi gagal. Coba lagi.');
+        resolve();
+      };
+
+      xhr.send(file);
+    });
+
+  } catch (err) {
+    progressEl.hidden = true;
+    showUploadResult('error', `✗ ${err.message}`);
+  }
 }
 
 function showUploadResult(type, message) {

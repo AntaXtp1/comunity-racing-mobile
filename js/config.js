@@ -22,13 +22,13 @@ const SITE_CONFIG = {
   // Untuk ganti foto: ubah `avatar` ke path gambar, misal "assets/members/owner.jpg"
   // Avatar kosong "" = pakai placeholder silhouette
   members: [
-    { name: "Xiaofan",  role: "Owner",       avatar: "" },
-    { name: "Anta",     role: "Admin",       avatar: "" },
-    { name: "Chennn",   role: "Admin",       avatar: "" },
+    { name: "Xiaofan",  role: "Owner",       avatar: "assets/members/Xiaofan.jpg" },
+    { name: "Anta",     role: "Admin",       avatar: "assets/members/Anta.jpg" },
+    { name: "Chennn",   role: "Admin",       avatar: "assets/members/Chenn.jpg" },
     { name: "Dayat",    role: "Admin",       avatar: "", initial: "D" },
-    { name: "Anta",     role: "Modder",      avatar: "" },
-    { name: "Hayzen",   role: "Contributor", avatar: "" },
-    { name: "Wa Min",   role: "Contributor", avatar: "" }
+    { name: "Anta",     role: "Modder",      avatar: "assets/members/Anta.jpg" },
+    { name: "Hayzen",   role: "Contributor", avatar: "assets/members/Hayzen.jpg" },
+    { name: "Wa Min",   role: "Contributor", avatar: "assets/members/Wa Min.jpg" }
   ],
 
   // Warna badge per role
@@ -44,7 +44,7 @@ const SITE_CONFIG = {
     discordMain:    "https://discord.gg/vQszJdfvZ",
     discordPartner: "https://discord.gg/gran-emozione-community-1348404725732872272",
     whatsapp:       "https://chat.whatsapp.com/G9XcVZZelwf7hrtXj58uqS",
-    youtube:        ""  // belum ada
+    youtube:        "https://www.youtube.com/@SimRaceMobile"
   },
 
   // Partner APK (redirect ke Discord partner)

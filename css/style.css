@@ -402,10 +402,10 @@ ul  { list-style: none; }
 }
 
 .member-avatar {
-  width:         96px;
-  height:        96px;
+  width:         76px;
+  height:        76px;
   border-radius: 50%;
-  margin:        0 auto 20px;
+  margin:        0 auto 16px;
   background:    var(--bg-secondary);
   border:        2px solid var(--border-light);
   display:       flex;
@@ -426,13 +426,13 @@ ul  { list-style: none; }
 }
 
 .member-avatar .placeholder {
-  font-size: 2.2rem;
+  font-size: 1.8rem;
   color:     var(--silver-400);
 }
 
 .member-avatar .initial {
   font-family: var(--font-heading);
-  font-size:   2.5rem;
+  font-size:   2rem;
   font-weight: 700;
   color:       var(--silver-300);
 }

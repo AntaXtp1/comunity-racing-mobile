@@ -107,7 +107,7 @@ const SITE_CONFIG = {
     discordPartner: "https://discord.gg/gran-emozione-community-1348404725732872272",
     whatsapp:       "https://chat.whatsapp.com/G9XcVZZelwf7hrtXj58uqS",
     youtube:        "https://www.youtube.com/@SimRaceMobile",
-    saweria:        ""  // Link Saweria — isi nanti
+    saweria:        "https://saweria.co/oyen245"  // Link Saweria
   },
 
   // Partner APK (redirect ke Discord partner)

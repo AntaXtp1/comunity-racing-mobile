@@ -279,6 +279,19 @@ ul  { list-style: none; }
   box-shadow:   0 6px 20px rgba(139, 0, 0, 0.4);
 }
 
+.btn-support {
+  background:   #f9a825;
+  color:        #1a1a1a;
+  border-color: #f9a825;
+}
+
+.btn-support:hover {
+  background:   #fbc02d;
+  border-color: #fbc02d;
+  transform:    translateY(-2px);
+  box-shadow:   0 6px 20px rgba(249, 168, 37, 0.4);
+}
+
 .btn-secondary {
   background:   transparent;
   color:        var(--silver-100);

@@ -37,6 +37,13 @@ function renderHero() {
   } else {
     discordBtn.style.display = 'none';
   }
+
+  const supportBtn = document.getElementById('heroSupport');
+  if (SITE_CONFIG.social.saweria) {
+    supportBtn.href = SITE_CONFIG.social.saweria;
+  } else {
+    supportBtn.style.display = 'none';
+  }
 }
 
 function renderAbout() {

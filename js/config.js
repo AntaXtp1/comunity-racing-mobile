@@ -46,6 +46,7 @@ const SITE_CONFIG = {
       discordMain:    "Gran Velocita",
       discordPartner: "Gran Emozione Community",
       heroDownload:   "Download APK",
+      heroSupport:    "Support Community",
       heroJoin:       "Join Discord",
     },
     en: {
@@ -74,6 +75,7 @@ const SITE_CONFIG = {
       discordMain:    "Gran Velocita",
       discordPartner: "Gran Emozione Community",
       heroDownload:   "Download APK",
+      heroSupport:    "Support Community",
       heroJoin:       "Join Discord",
     }
   },
@@ -104,7 +106,8 @@ const SITE_CONFIG = {
     discordMain:    "https://discord.gg/vQszJdfvZ",
     discordPartner: "https://discord.gg/gran-emozione-community-1348404725732872272",
     whatsapp:       "https://chat.whatsapp.com/G9XcVZZelwf7hrtXj58uqS",
-    youtube:        "https://www.youtube.com/@SimRaceMobile"
+    youtube:        "https://www.youtube.com/@SimRaceMobile",
+    saweria:        ""  // Link Saweria — isi nanti
   },
 
   // Partner APK (redirect ke Discord partner)
